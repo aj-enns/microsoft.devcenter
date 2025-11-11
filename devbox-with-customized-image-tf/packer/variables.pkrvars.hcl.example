@@ -1,0 +1,23 @@
+# Packer variables file
+# Copy this to variables.pkrvars.hcl and customize with your values
+
+# Azure authentication (can also be set via environment variables)
+# subscription_id = "your-subscription-id"
+# tenant_id      = "your-tenant-id"  
+# client_id      = "your-client-id"
+# client_secret  = "your-client-secret"
+
+# Azure resources
+resource_group_name    = "rg-devbox-learn-demo"
+gallery_name          = "galdefault"  # This should match your Terraform gallery name
+image_definition_name = "CustomizedImage"
+location             = "East US"
+
+# Image configuration
+image_version = "1.0.0"  # Increment this for new versions
+vm_size      = "Standard_D2s_v3"
+
+# Base image (Windows 11 Enterprise with Microsoft 365)
+image_publisher = "MicrosoftWindowsDesktop"
+image_offer    = "windows-ent-cpc"
+image_sku      = "win11-22h2-ent-cpc-m365"
