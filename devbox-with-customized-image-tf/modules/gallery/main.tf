@@ -48,11 +48,6 @@ variable "guid_id" {
   type        = string
 }
 
-# Data source for resource group
-data "azurerm_resource_group" "main" {
-  name = var.resource_group_name
-}
-
 # Data source for current client configuration
 data "azurerm_client_config" "current" {}
 
@@ -75,7 +70,7 @@ locals {
 # Compute Gallery
 resource "azurerm_shared_image_gallery" "main" {
   name                = var.gallery_name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
   location            = var.location
 }
 
@@ -83,7 +78,7 @@ resource "azurerm_shared_image_gallery" "main" {
 resource "azurerm_shared_image" "main" {
   name                = var.image_definition_name
   gallery_name        = azurerm_shared_image_gallery.main.name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
   location            = var.location
   os_type             = "Windows"
   hyper_v_generation  = "V2"

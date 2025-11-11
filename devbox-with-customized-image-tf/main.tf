@@ -28,9 +28,16 @@ provider "azurerm" {
 # Data source for current client configuration
 data "azurerm_client_config" "current" {}
 
-# Data source for resource group
-data "azurerm_resource_group" "main" {
-  name = var.resource_group_name
+# Create resource group
+resource "azurerm_resource_group" "main" {
+  name     = var.resource_group_name
+  location = var.location
+
+  tags = {
+    Environment = "DevCenter"
+    Purpose     = "DevBox-with-CustomImage"
+    CreatedBy   = "Terraform"
+  }
 }
 
 # Random string for unique resource naming
@@ -79,7 +86,7 @@ module "vnet" {
   count  = var.existing_subnet_id == "" ? 1 : 0
   source = "./modules/vnet"
   
-  resource_group_name       = data.azurerm_resource_group.main.name
+  resource_group_name       = azurerm_resource_group.main.name
   vnet_name                 = local.vnet_name
   subnet_name               = local.subnet_name
   location                  = var.location
@@ -90,7 +97,7 @@ module "vnet" {
 # User Assigned Managed Identity
 resource "azurerm_user_assigned_identity" "main" {
   name                = local.id_name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = azurerm_resource_group.main.name
   location            = var.location
 }
 
@@ -100,7 +107,7 @@ module "gallery" {
   
   gallery_name           = local.image_gallery_name
   location              = var.location
-  resource_group_name   = data.azurerm_resource_group.main.name
+  resource_group_name   = azurerm_resource_group.main.name
   image_definition_name = var.image_definition_name
   image_offer           = var.image_offer
   image_publisher       = var.image_publisher
@@ -115,7 +122,7 @@ module "devcenter" {
   source = "./modules/devcenter"
   
   location                        = var.location
-  resource_group_name            = data.azurerm_resource_group.main.name
+  resource_group_name            = azurerm_resource_group.main.name
   devcenter_name                 = local.devcenter_name
   subnet_id                      = var.existing_subnet_id != "" ? var.existing_subnet_id : module.vnet[0].subnet_id
   network_connection_name        = local.nc_name
