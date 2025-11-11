@@ -96,10 +96,6 @@ variable "devcenter_settings" {
 }
 
 # Data sources
-data "azurerm_resource_group" "main" {
-  name = var.resource_group_name
-}
-
 data "azurerm_shared_image_gallery" "main" {
   name                = var.gallery_name
   resource_group_name = var.resource_group_name
@@ -129,7 +125,7 @@ locals {
 # DevCenter
 resource "azurerm_dev_center" "main" {
   name                = var.devcenter_name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
   location            = var.location
 
   identity {
@@ -170,7 +166,7 @@ resource "azurerm_dev_center_gallery" "main" {
 # Network Connection
 resource "azurerm_dev_center_network_connection" "main" {
   name                = var.network_connection_name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
   location            = var.location
   domain_join_type    = "AzureADJoin"
   subnet_id           = var.subnet_id
@@ -188,12 +184,13 @@ resource "null_resource" "attached_network_placeholder" {
   }
 }
 
-# Dev Box Definition
+# Dev Box Definition - using built-in image first, will update to custom image after Packer build
 resource "azurerm_dev_center_dev_box_definition" "main" {
   name               = local.customized_image_definition.name
   dev_center_id      = azurerm_dev_center.main.id
   location           = var.location
-  image_reference_id = "${data.azurerm_shared_image_gallery.main.id}/images/${var.image_definition_name}"
+  # Use built-in Visual Studio 2022 Enterprise on Windows 11 + Microsoft 365 image for now
+  image_reference_id = "${azurerm_dev_center.main.id}/galleries/default/images/microsoftvisualstudio_visualstudioplustools_vs-2022-ent-general-win11-m365-gen2"
   sku_name          = local.compute[local.customized_image_definition.compute]
 
   depends_on = [
@@ -205,7 +202,7 @@ resource "azurerm_dev_center_dev_box_definition" "main" {
 # Project
 resource "azurerm_dev_center_project" "main" {
   name               = var.project_name
-  resource_group_name = data.azurerm_resource_group.main.name
+  resource_group_name = var.resource_group_name
   location           = var.location
   dev_center_id      = azurerm_dev_center.main.id
 }
