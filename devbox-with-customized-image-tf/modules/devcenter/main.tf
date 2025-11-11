@@ -83,9 +83,10 @@ variable "devcenter_settings" {
   description = "DevCenter settings from JSON file"
   type = object({
     customizedImageDevboxdefinitions = list(object({
-      name    = string
-      compute = string
-      storage = string
+      name      = string
+      compute   = string
+      storage   = string
+      imageType = optional(string, "CustomizedImage")
     }))
     customizedImagePools = list(object({
       name          = string
@@ -112,7 +113,14 @@ locals {
   # Used when Dev Center associate with Azure Compute Gallery
   windows365_principal_id = "8eec7c09-06ae-48e9-aafd-9fb31a5d5175"
   
-  customized_image_definition = var.devcenter_settings.customizedImageDevboxdefinitions[0]
+  # Map image types to their actual image references
+  image_references = {
+    "CustomizedImage"   = "${azurerm_dev_center.main.id}/galleries/${var.gallery_name}/images/CustomizedImage"
+    "IntelliJDevImage" = "${azurerm_dev_center.main.id}/galleries/${var.gallery_name}/images/IntelliJDevImage"
+    # Default to built-in VS2022 if no image type specified
+    "default"          = "${azurerm_dev_center.main.id}/galleries/default/images/microsoftvisualstudio_visualstudioplustools_vs-2022-ent-general-win11-m365-gen2"
+  }
+  
   query_template_progress     = substr("${var.image_definition_name}-${var.guid_id}-query", 0, 64)
   
   compute = {
@@ -184,14 +192,17 @@ resource "null_resource" "attached_network_placeholder" {
   }
 }
 
-# Dev Box Definition - using built-in image first, will update to custom image after Packer build
+# Dev Box Definitions - supports multiple image types
 resource "azurerm_dev_center_dev_box_definition" "main" {
-  name               = local.customized_image_definition.name
+  for_each = { for def in var.devcenter_settings.customizedImageDevboxdefinitions : def.name => def }
+  
+  name               = each.value.name
   dev_center_id      = azurerm_dev_center.main.id
   location           = var.location
-  # Use built-in Visual Studio 2022 Enterprise on Windows 11 + Microsoft 365 image for now
-  image_reference_id = "${azurerm_dev_center.main.id}/galleries/default/images/microsoftvisualstudio_visualstudioplustools_vs-2022-ent-general-win11-m365-gen2"
-  sku_name          = local.compute[local.customized_image_definition.compute]
+  
+  # Use custom image if imageType is specified and available, otherwise built-in VS2022
+  image_reference_id = can(local.image_references[each.value.imageType]) ? local.image_references[each.value.imageType] : local.image_references["default"]
+  sku_name          = local.compute[each.value.compute]
 
   depends_on = [
     null_resource.attached_network_placeholder,
@@ -240,8 +251,8 @@ output "devcenter_name" {
 }
 
 output "customized_image_devbox_definitions" {
-  description = "The name of the customized image DevBox definition"
-  value       = azurerm_dev_center_dev_box_definition.main.name
+  description = "The names of the customized image DevBox definitions"
+  value       = join(", ", [for def in azurerm_dev_center_dev_box_definition.main : def.name])
 }
 
 output "network_connection_name" {

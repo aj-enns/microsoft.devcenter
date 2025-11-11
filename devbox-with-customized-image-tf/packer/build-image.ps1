@@ -3,7 +3,8 @@
 
 param(
     [string]$Action = "build",
-    [string]$VarFile = "variables.pkrvars.hcl",
+    [string]$ImageType = "vscode",  # "vscode" or "intellij" or "both"
+    [string]$VarFile = "",
     [switch]$Debug,
     [switch]$Force
 )
@@ -22,8 +23,34 @@ function Write-ColorOutput {
     Write-Host "$Color$Message$Reset"
 }
 
+function Get-ImageConfig {
+    param([string]$ImageType)
+    
+    switch ($ImageType.ToLower()) {
+        "vscode" {
+            return @{
+                ConfigFile = "windows-devbox.pkr.hcl"
+                VarFile = if ($VarFile) { $VarFile } else { "variables.pkrvars.hcl" }
+                Name = "VS Code DevBox"
+            }
+        }
+        "intellij" {
+            return @{
+                ConfigFile = "intellij-devbox.pkr.hcl" 
+                VarFile = if ($VarFile) { $VarFile } else { "intellij-variables.pkrvars.hcl" }
+                Name = "IntelliJ DevBox"
+            }
+        }
+        default {
+            throw "Unknown image type: $ImageType. Valid types: vscode, intellij"
+        }
+    }
+}
+
 function Test-Prerequisites {
-    Write-ColorOutput "🔍 Checking prerequisites..." $Yellow
+    param([hashtable]$Config)
+    
+    Write-ColorOutput "🔍 Checking prerequisites for $($Config.Name)..." $Yellow
     
     # Check if Packer is installed
     try {
@@ -42,23 +69,31 @@ function Test-Prerequisites {
         Write-ColorOutput "✅ Azure CLI found: $azVersion" $Green
     }
     catch {
-        Write-ColorOutput "⚠️  Azure CLI not found. You may need to authenticate differently." $Yellow
+        Write-ColorOutput "⚠️  Azure CLI not found. You may need to authenticate different." $Yellow
     }
     
-    # Check if variables file exists
-    if (-not (Test-Path $VarFile)) {
-        Write-ColorOutput "❌ Variables file not found: $VarFile" $Red
-        Write-ColorOutput "   Copy variables.pkrvars.hcl.example to $VarFile and customize it." $Yellow
+    # Check if config file exists
+    if (-not (Test-Path $Config.ConfigFile)) {
+        Write-ColorOutput "❌ Packer config not found: $($Config.ConfigFile)" $Red
         exit 1
     }
     
-    Write-ColorOutput "✅ Prerequisites check passed!" $Green
+    # Check if variables file exists
+    if (-not (Test-Path $Config.VarFile)) {
+        Write-ColorOutput "❌ Variables file not found: $($Config.VarFile)" $Red
+        Write-ColorOutput "   Create $($Config.VarFile) with your Azure resource details." $Yellow
+        exit 1
+    }
+    
+    Write-ColorOutput "✅ Prerequisites check passed for $($Config.Name)!" $Green
 }
 
 function Initialize-Packer {
-    Write-ColorOutput "🚀 Initializing Packer..." $Yellow
+    param([hashtable]$Config)
+    
+    Write-ColorOutput "🚀 Initializing Packer for $($Config.Name)..." $Yellow
     try {
-        packer init .
+        packer init $Config.ConfigFile
         Write-ColorOutput "✅ Packer initialized successfully!" $Green
     }
     catch {
@@ -67,12 +102,14 @@ function Initialize-Packer {
     }
 }
 
-function Validate-PackerConfig {
-    Write-ColorOutput "🔍 Validating Packer configuration..." $Yellow
+function Test-PackerConfig {
+    param([hashtable]$Config)
+    
+    Write-ColorOutput "🔍 Validating Packer configuration for $($Config.Name)..." $Yellow
     try {
         $validateArgs = @("validate")
-        if ($VarFile) { $validateArgs += @("-var-file=$VarFile") }
-        $validateArgs += "."
+        $validateArgs += @("-var-file=$($Config.VarFile)")
+        $validateArgs += $Config.ConfigFile
         
         & packer @validateArgs
         Write-ColorOutput "✅ Packer configuration is valid!" $Green
@@ -83,52 +120,98 @@ function Validate-PackerConfig {
     }
 }
 
-function Build-Image {
-    Write-ColorOutput "🏗️  Starting Packer build..." $Yellow
+function Build-PackerImage {
+    param([hashtable]$Config)
+    
+    Write-ColorOutput "🏗️  Starting Packer build for $($Config.Name)..." $Yellow
     Write-ColorOutput "   This may take 30-60 minutes depending on the configuration." $Yellow
     
     try {
         $buildArgs = @("build")
         if ($Debug) { $buildArgs += "-debug" }
         if ($Force) { $buildArgs += "-force" }
-        if ($VarFile) { $buildArgs += "-var-file=$VarFile" }
-        $buildArgs += "."
+        $buildArgs += @("-var-file=$($Config.VarFile)")
+        $buildArgs += $Config.ConfigFile
         
+        $buildStart = Get-Date
         & packer @buildArgs
-        Write-ColorOutput "✅ Image build completed successfully!" $Green
+        $buildDuration = (Get-Date) - $buildStart
+        
+        Write-ColorOutput "✅ Image build completed successfully for $($Config.Name)!" $Green
+        Write-ColorOutput "   Build duration: $($buildDuration.ToString('hh\:mm\:ss'))" $Yellow
     }
     catch {
-        Write-ColorOutput "❌ Image build failed: $_" $Red
+        Write-ColorOutput "❌ Image build failed for $($Config.Name): $_" $Red
         exit 1
     }
 }
 
 function Show-Usage {
     Write-Host @"
-Packer Build Script for DevCenter Custom Image
+Packer Build Script for DevCenter Custom Images
 
 Usage: .\build-image.ps1 [OPTIONS]
 
 Options:
-  -Action <action>    Action to perform: init, validate, build, or all (default: build)
-  -VarFile <file>     Variables file to use (default: variables.pkrvars.hcl)
-  -Debug             Enable debug mode for Packer
-  -Force             Force build even if artifacts exist
-  -Help              Show this help message
+  -Action <action>     Action to perform: init, validate, build, or all (default: build)
+  -ImageType <type>    Image type to build: vscode, intellij, or both (default: vscode)
+  -VarFile <file>      Variables file to use (overrides default for image type)
+  -Debug              Enable debug mode for Packer
+  -Force              Force build even if artifacts exist
+  -Help               Show this help message
+
+Image Types:
+  vscode              VS Code development image (windows-devbox.pkr.hcl)
+  intellij            IntelliJ IDEA + WSL image (intellij-devbox.pkr.hcl)
+  both                Build both image types sequentially
 
 Examples:
-  .\build-image.ps1                                    # Build with default settings
-  .\build-image.ps1 -Action validate                   # Just validate configuration
-  .\build-image.ps1 -Action all                        # Init, validate, and build
-  .\build-image.ps1 -VarFile custom.pkrvars.hcl       # Use custom variables file
-  .\build-image.ps1 -Debug -Force                      # Debug mode with force rebuild
+  .\build-image.ps1                                    # Build VS Code image
+  .\build-image.ps1 -ImageType intellij               # Build IntelliJ image
+  .\build-image.ps1 -ImageType both                    # Build both images
+  .\build-image.ps1 -Action validate -ImageType vscode # Validate VS Code config
+  .\build-image.ps1 -Action all -ImageType intellij    # Init, validate, and build IntelliJ
+  .\build-image.ps1 -Debug -Force -ImageType both      # Debug mode, force rebuild both
 
 Prerequisites:
   1. Install Packer: https://www.packer.io/downloads
   2. Authenticate with Azure (az login or environment variables)
-  3. Copy variables.pkrvars.hcl.example to variables.pkrvars.hcl and customize
-  4. Ensure the Azure Compute Gallery and Image Definition exist (created by Terraform)
+  3. Create variables files: variables.pkrvars.hcl and intellij-variables.pkrvars.hcl
+  4. Ensure the Azure Compute Gallery and Image Definitions exist (created by Terraform)
 "@
+}
+
+function Process-ImageType {
+    param([string]$Action, [string]$ImageType)
+    
+    $config = Get-ImageConfig -ImageType $ImageType
+    
+    switch ($Action.ToLower()) {
+        "init" {
+            Test-Prerequisites -Config $config
+            Initialize-Packer -Config $config
+        }
+        "validate" {
+            Test-Prerequisites -Config $config
+            Test-PackerConfig -Config $config
+        }
+        "build" {
+            Test-Prerequisites -Config $config
+            Build-PackerImage -Config $config
+        }
+        "all" {
+            Test-Prerequisites -Config $config
+            Initialize-Packer -Config $config
+            Test-PackerConfig -Config $config
+            Build-PackerImage -Config $config
+        }
+        default {
+            Write-ColorOutput "❌ Unknown action: $Action" $Red
+            Write-ColorOutput "   Valid actions: init, validate, build, all" $Yellow
+            Show-Usage
+            exit 1
+        }
+    }
 }
 
 # Main execution
@@ -144,39 +227,26 @@ try {
     
     Write-ColorOutput "🎯 Packer DevCenter Image Build" $Green
     Write-ColorOutput "   Action: $Action" $Yellow
-    Write-ColorOutput "   Variables: $VarFile" $Yellow
+    Write-ColorOutput "   Image Type: $ImageType" $Yellow
     Write-ColorOutput ""
     
-    # Execute based on action
-    switch ($Action.ToLower()) {
-        "init" {
-            Test-Prerequisites
-            Initialize-Packer
-        }
-        "validate" {
-            Test-Prerequisites
-            Validate-PackerConfig
-        }
-        "build" {
-            Test-Prerequisites
-            Build-Image
-        }
-        "all" {
-            Test-Prerequisites
-            Initialize-Packer
-            Validate-PackerConfig
-            Build-Image
-        }
-        default {
-            Write-ColorOutput "❌ Unknown action: $Action" $Red
-            Write-ColorOutput "   Valid actions: init, validate, build, all" $Yellow
-            Show-Usage
-            exit 1
-        }
+    # Process based on image type
+    if ($ImageType.ToLower() -eq "both") {
+        Write-ColorOutput "🔥 Building both image types..." $Green
+        
+        Write-ColorOutput "=== Building VS Code Image ===" $Yellow
+        Process-ImageType -Action $Action -ImageType "vscode"
+        
+        Write-ColorOutput ""
+        Write-ColorOutput "=== Building IntelliJ Image ===" $Yellow
+        Process-ImageType -Action $Action -ImageType "intellij"
+    }
+    else {
+        Process-ImageType -Action $Action -ImageType $ImageType
     }
     
     Write-ColorOutput ""
-    Write-ColorOutput "🎉 Operation completed successfully!" $Green
+    Write-ColorOutput "🎉 All operations completed successfully!" $Green
 }
 catch {
     Write-ColorOutput "❌ Script failed: $_" $Red

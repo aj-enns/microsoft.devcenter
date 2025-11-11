@@ -108,10 +108,23 @@ module "gallery" {
   gallery_name           = local.image_gallery_name
   location              = var.location
   resource_group_name   = azurerm_resource_group.main.name
-  image_definition_name = var.image_definition_name
-  image_offer           = var.image_offer
-  image_publisher       = var.image_publisher
-  image_sku             = var.image_sku
+  
+  # Multiple image definitions
+  image_definitions = [
+    {
+      name        = "CustomizedImage"
+      offer       = var.image_offer
+      publisher   = var.image_publisher
+      sku         = var.image_sku
+    },
+    {
+      name        = "IntelliJDevImage"
+      offer       = var.image_offer
+      publisher   = var.image_publisher
+      sku         = var.image_sku
+    }
+  ]
+  
   image_template_name   = var.image_template_name
   template_identity_name = "${local.abbreviations.managed_identity_user_assigned_identities}tpl-${local.resource_token}"
   guid_id               = random_uuid.guid_id.result
@@ -144,8 +157,8 @@ module "devcenter" {
   ]
 }
 
-# Packer image build automation (optional)
-resource "null_resource" "packer_build" {
+# Packer image build automation for VS Code image (optional)
+resource "null_resource" "packer_build_vscode" {
   count = var.enable_packer_build ? 1 : 0
 
   # Trigger rebuild when Packer configuration changes
@@ -154,13 +167,35 @@ resource "null_resource" "packer_build" {
     variables_hash     = filemd5("${path.module}/packer/variables.pkrvars.hcl")
   }
 
-  # Build the custom image with Packer
+  # Build the VS Code custom image with Packer
   provisioner "local-exec" {
-    command     = "powershell.exe -ExecutionPolicy Bypass -File build-image.ps1 -Action Build"
+    command     = "powershell.exe -ExecutionPolicy Bypass -File build-image.ps1 -Action Build -ImageType vscode"
     working_dir = "${path.module}/packer"
   }
 
   depends_on = [
     module.gallery
+  ]
+}
+
+# Packer image build automation for IntelliJ image (optional)
+resource "null_resource" "packer_build_intellij" {
+  count = var.enable_packer_build ? 1 : 0
+
+  # Trigger rebuild when Packer configuration changes
+  triggers = {
+    packer_config_hash = filemd5("${path.module}/packer/intellij-devbox.pkr.hcl")
+    variables_hash     = filemd5("${path.module}/packer/intellij-variables.pkrvars.hcl")
+  }
+
+  # Build the IntelliJ custom image with Packer
+  provisioner "local-exec" {
+    command     = "powershell.exe -ExecutionPolicy Bypass -File build-image.ps1 -Action Build -ImageType intellij"
+    working_dir = "${path.module}/packer"
+  }
+
+  depends_on = [
+    module.gallery,
+    null_resource.packer_build_vscode
   ]
 }

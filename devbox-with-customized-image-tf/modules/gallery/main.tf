@@ -3,24 +3,22 @@ variable "gallery_name" {
   type        = string
 }
 
-variable "image_definition_name" {
-  description = "The name of Azure Compute Gallery image definition"
-  type        = string
-}
-
-variable "image_offer" {
-  description = "The name of image offer"
-  type        = string
-}
-
-variable "image_publisher" {
-  description = "The name of image publisher"
-  type        = string
-}
-
-variable "image_sku" {
-  description = "The name of image sku"
-  type        = string
+variable "image_definitions" {
+  description = "List of image definitions to create in the gallery"
+  type = list(object({
+    name      = string
+    offer     = string
+    publisher = string
+    sku       = string
+  }))
+  default = [
+    {
+      name      = "CustomizedImage"
+      offer     = "windows-ent-cpc"
+      publisher = "MicrosoftWindowsDesktop"
+      sku       = "win11-22h2-ent-cpc-m365"
+    }
+  ]
 }
 
 variable "image_template_name" {
@@ -74,9 +72,11 @@ resource "azurerm_shared_image_gallery" "main" {
   location            = var.location
 }
 
-# Image Definition
+# Image Definitions (multiple)
 resource "azurerm_shared_image" "main" {
-  name                = var.image_definition_name
+  for_each            = { for img in var.image_definitions : img.name => img }
+  
+  name                = each.value.name
   gallery_name        = azurerm_shared_image_gallery.main.name
   resource_group_name = var.resource_group_name
   location            = var.location
@@ -86,9 +86,9 @@ resource "azurerm_shared_image" "main" {
   trusted_launch_enabled = true
 
   identifier {
-    offer     = var.image_offer
-    publisher = var.image_publisher
-    sku       = var.image_sku
+    offer     = each.value.offer
+    publisher = each.value.publisher
+    sku       = each.value.sku
   }
 }
 
@@ -119,6 +119,11 @@ output "gallery_name" {
 output "gallery_id" {
   description = "The ID of the compute gallery"
   value       = azurerm_shared_image_gallery.main.id
+}
+
+output "image_definitions" {
+  description = "Map of created image definitions"
+  value       = { for k, v in azurerm_shared_image.main : k => v.name }
 }
 
 output "template_identity_id" {
