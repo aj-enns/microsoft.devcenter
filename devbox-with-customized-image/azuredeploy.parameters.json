@@ -3,13 +3,13 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "userPrincipalId": {
-      "value": "GEN-AZUREAD-OBJECTID"
+      "value": "812cc6d2-00b7-4d5b-86cc-0a3dc91c5852"
     },
     "userPrincipalType": {
-      "value": "ServicePrincipal"
+      "value": "User"
     },
     "location": {
-      "value": "eastus"
+      "value": "canadacentral"
     }
   }
 }

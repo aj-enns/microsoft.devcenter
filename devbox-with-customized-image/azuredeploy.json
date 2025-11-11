@@ -370,7 +370,7 @@
                   "publisher": "[parameters('imagePublisher')]",
                   "offer": "[parameters('imageOffer')]",
                   "sku": "[parameters('imageSku')]",
-                  "version": "Latest"
+                  "version": "22621.6060.251014"
                 },
                 "customize": "[variables('customizedCommand')]",
                 "distribute": [

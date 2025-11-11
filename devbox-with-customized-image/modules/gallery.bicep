@@ -95,7 +95,7 @@ resource imageTemplate 'Microsoft.VirtualMachineImages/imageTemplates@2022-07-01
       publisher: imagePublisher
       offer: imageOffer
       sku: imageSku
-      version: 'Latest'
+      version: '22621.6060.251014'
     }
     customize: customizedCommand
     distribute: [
