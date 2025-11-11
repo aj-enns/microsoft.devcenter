@@ -120,3 +120,9 @@ variable "existing_subnet_id" {
   type        = string
   default     = ""
 }
+
+variable "enable_packer_build" {
+  description = "Enable automatic Packer image build during Terraform apply"
+  type        = bool
+  default     = true
+}

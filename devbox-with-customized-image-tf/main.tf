@@ -136,3 +136,24 @@ module "devcenter" {
     module.gallery
   ]
 }
+
+# Packer image build automation (optional)
+resource "null_resource" "packer_build" {
+  count = var.enable_packer_build ? 1 : 0
+
+  # Trigger rebuild when Packer configuration changes
+  triggers = {
+    packer_config_hash = filemd5("${path.module}/packer/windows-devbox.pkr.hcl")
+    variables_hash     = filemd5("${path.module}/packer/variables.pkrvars.hcl")
+  }
+
+  # Build the custom image with Packer
+  provisioner "local-exec" {
+    command     = "powershell.exe -ExecutionPolicy Bypass -File build-image.ps1 -Action Build"
+    working_dir = "${path.module}/packer"
+  }
+
+  depends_on = [
+    module.gallery
+  ]
+}

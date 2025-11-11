@@ -22,18 +22,7 @@ variable "tenant_id" {
   default     = env("ARM_TENANT_ID")
 }
 
-variable "client_id" {
-  type        = string
-  description = "Azure client ID"
-  default     = env("ARM_CLIENT_ID")
-}
-
-variable "client_secret" {
-  type        = string
-  description = "Azure client secret"
-  default     = env("ARM_CLIENT_SECRET")
-  sensitive   = true
-}
+# Note: Using Azure CLI authentication - no client credentials needed
 
 variable "resource_group_name" {
   type        = string
@@ -94,11 +83,10 @@ locals {
 
 # Source configuration
 source "azure-arm" "windows_devbox" {
-  # Authentication
-  subscription_id = var.subscription_id
-  tenant_id       = var.tenant_id
-  client_id       = var.client_id
-  client_secret   = var.client_secret
+  # Authentication - Use Azure CLI
+  use_azure_cli_auth = true
+  subscription_id    = var.subscription_id
+  tenant_id         = var.tenant_id
 
   # Resource configuration
   managed_image_resource_group_name = var.resource_group_name
@@ -269,13 +257,16 @@ build {
     ]
   }
 
-  # Run Windows Update (optional, can be commented out to speed up builds)
-  provisioner "windows-update" {
-    search_criteria = "IsInstalled=0"
-    filters = [
-      "exclude:$_.Title -like '*Preview*'",
-      "include:$true"
+  # Run Windows Update (optional, using PowerShell instead of windows-update plugin)
+  provisioner "powershell" {
+    inline = [
+      "Write-Output 'Installing Windows Updates...'",
+      "Install-Module -Name PSWindowsUpdate -Force -Scope AllUsers",
+      "Import-Module PSWindowsUpdate",
+      "Get-WindowsUpdate -AcceptAll -Install -AutoReboot:$false -Verbose",
+      "Write-Output 'Windows Updates installation completed.'"
     ]
+    valid_exit_codes = [0, 3010] # 3010 = reboot required
   }
 
   # Final system preparation
