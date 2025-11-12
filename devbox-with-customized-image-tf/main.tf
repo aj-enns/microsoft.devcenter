@@ -113,15 +113,15 @@ module "gallery" {
   image_definitions = [
     {
       name        = "CustomizedImage"
-      offer       = var.image_offer
-      publisher   = var.image_publisher
-      sku         = var.image_sku
+      offer       = "windows-ent-cpc"
+      publisher   = "MicrosoftWindowsDesktop" 
+      sku         = "win11-22h2-ent-cpc-m365-vscode"
     },
     {
       name        = "IntelliJDevImage"
-      offer       = var.image_offer
-      publisher   = var.image_publisher
-      sku         = var.image_sku
+      offer       = "windows-ent-cpc"
+      publisher   = "MicrosoftWindowsDesktop"
+      sku         = "win11-22h2-ent-cpc-m365-intellij"
     }
   ]
   

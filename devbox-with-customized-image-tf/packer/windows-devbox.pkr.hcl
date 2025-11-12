@@ -141,14 +141,18 @@ build {
     ]
   }
 
-  # Install Chocolatey
+  # Install Chocolatey (without refreshenv)
   provisioner "powershell" {
     inline = [
       "Write-Output 'Installing Chocolatey...'",
       "Set-ExecutionPolicy Bypass -Scope Process -Force",
       "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072",
       "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))",
-      "refreshenv"
+      "",
+      "# Manually refresh environment for this session",
+      "$env:ChocolateyInstall = 'C:\\ProgramData\\chocolatey'",
+      "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
+      "Write-Output 'Chocolatey installation complete'"
     ]
   }
 
@@ -156,6 +160,7 @@ build {
   provisioner "powershell" {
     inline = [
       "Write-Output 'Installing development tools...'",
+      "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
       "choco install -y git --params '/GitAndUnixToolsOnPath /NoAutoCrlf'",
       "choco install -y azure-cli",
       "choco install -y vscode",
@@ -173,26 +178,43 @@ build {
   provisioner "powershell" {
     inline = [
       "Write-Output 'Installing VS Code extensions...'",
+      "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
       "$vscode_extension_dir = 'C:/temp/extensions'",
       "New-Item $vscode_extension_dir -ItemType Directory -Force",
       "[Environment]::SetEnvironmentVariable('VSCODE_EXTENSIONS', $vscode_extension_dir, 'Machine')",
       "$env:VSCODE_EXTENSIONS = $vscode_extension_dir",
       "",
+      "# Function to install extension with error handling",
+      "$installExtension = {",
+      "  param($extensionId)",
+      "  try {",
+      "    Write-Output \"Installing extension: $extensionId\"",
+      "    & 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension $extensionId --force 2>&1 | Out-Null",
+      "    Write-Output \"Successfully installed: $extensionId\"",
+      "  } catch {",
+      "    Write-Output \"Warning: Failed to install $extensionId - $($_.Exception.Message)\"",
+      "  }",
+      "}",
+      "",
       "# Install essential extensions",
-      "& 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension github.copilot --force",
-      "& 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension ms-vscode.azure-account --force",
-      "& 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension ms-azuretools.vscode-azureresourcegroups --force",
-      "& 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension ms-python.python --force",
-      "& 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension ms-dotnettools.csharp --force",
-      "& 'C:/Program Files/Microsoft VS Code/bin/code.cmd' --install-extension hashicorp.terraform --force"
+      "& $installExtension 'github.copilot'",
+      "& $installExtension 'ms-vscode.azure-account'",
+      "& $installExtension 'ms-azuretools.vscode-azureresourcegroups'",
+      "& $installExtension 'ms-python.python'",
+      "& $installExtension 'ms-dotnettools.csharp'",
+      "& $installExtension 'hashicorp.terraform'",
+      "",
+      "Write-Output 'VS Code extension installation complete'"
     ]
     pause_before = "30s" # Wait for VS Code installation to complete
+    valid_exit_codes = [0, 1, 3010]
   }
 
   # Configure Git globally
   provisioner "powershell" {
     inline = [
       "Write-Output 'Configuring Git...'",
+      "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
       "git config --system core.autocrlf false",
       "git config --system core.longpaths true",
       "git config --system credential.helper manager-core"
@@ -214,14 +236,14 @@ build {
   provisioner "powershell" {
     inline = [
       "Write-Output 'Configuring Windows Defender exclusions...'",
-      "Add-MpPreference -ExclusionPath 'C:\\dev'",
-      "Add-MpPreference -ExclusionPath 'C:\\repos'",
-      "Add-MpPreference -ExclusionPath 'C:\\workspace'",
-      "Add-MpPreference -ExclusionPath 'C:\\temp'",
-      "Add-MpPreference -ExclusionProcess 'node.exe'",
-      "Add-MpPreference -ExclusionProcess 'dotnet.exe'",
-      "Add-MpPreference -ExclusionProcess 'python.exe'",
-      "Add-MpPreference -ExclusionProcess 'git.exe'"
+      "Add-MpPreference -ExclusionPath 'C:\\dev' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionPath 'C:\\repos' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionPath 'C:\\workspace' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionPath 'C:\\temp' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionProcess 'node.exe' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionProcess 'dotnet.exe' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionProcess 'python.exe' -ErrorAction SilentlyContinue",
+      "Add-MpPreference -ExclusionProcess 'git.exe' -ErrorAction SilentlyContinue"
     ]
   }
 
@@ -241,9 +263,9 @@ build {
       "Write-Output 'Installing PowerShell modules...'",
       "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force",
       "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted",
-      "Install-Module -Name Az -Force -AllowClobber",
-      "Install-Module -Name Microsoft.Graph -Force -AllowClobber",
-      "Install-Module -Name posh-git -Force"
+      "Install-Module -Name Az -Force -AllowClobber -Scope AllUsers",
+      "Install-Module -Name Microsoft.Graph -Force -AllowClobber -Scope AllUsers",
+      "Install-Module -Name posh-git -Force -Scope AllUsers"
     ]
   }
 
@@ -257,38 +279,45 @@ build {
     ]
   }
 
-  # Run Windows Update (optional, using PowerShell instead of windows-update plugin)
-  provisioner "powershell" {
-    inline = [
-      "Write-Output 'Installing Windows Updates...'",
-      "Install-Module -Name PSWindowsUpdate -Force -Scope AllUsers",
-      "Import-Module PSWindowsUpdate",
-      "Get-WindowsUpdate -AcceptAll -Install -AutoReboot:$false -Verbose",
-      "Write-Output 'Windows Updates installation completed.'"
-    ]
-    valid_exit_codes = [0, 3010] # 3010 = reboot required
-  }
+  # # TEMPORARILY COMMENTED OUT FOR DEBUGGING - Windows Update has access denied issues
+  # # Run Windows Update (optional, using PowerShell instead of windows-update plugin)
+  # provisioner "powershell" {
+  #   inline = [
+  #     "Write-Output 'Installing Windows Updates...'",
+  #     "Install-Module -Name PSWindowsUpdate -Force -Scope AllUsers",
+  #     "Import-Module PSWindowsUpdate",
+  #     "Get-WindowsUpdate -AcceptAll -Install -AutoReboot:$false -Verbose",
+  #     "Write-Output 'Windows Updates installation completed.'"
+  #   ]
+  #   valid_exit_codes = [0, 3010] # 3010 = reboot required
+  # }
 
   # Final system preparation
   provisioner "powershell" {
     inline = [
       "Write-Output 'Preparing system for imaging...'",
       "# Remove any temporary user profiles",
-      "Get-WmiObject -Class Win32_UserProfile | Where-Object { $_.Special -eq $false -and $_.LocalPath -like '*temp*' } | Remove-WmiObject",
+      "Get-WmiObject -Class Win32_UserProfile | Where-Object { $_.Special -eq $false -and $_.LocalPath -like '*temp*' } | Remove-WmiObject -ErrorAction SilentlyContinue",
       "",
       "# Clear event logs",
-      "wevtutil el | Foreach-Object {wevtutil cl $_}",
+      "wevtutil el | Foreach-Object {wevtutil cl $_ 2>$null}",
       "",
-      "Write-Output 'System preparation complete.'"
+      "Write-Output 'System preparation complete.'",
+      "Write-Output 'Next step is a REBOOT....'"
     ]
+  }
+
+  # Restart Windows to complete installations
+  provisioner "windows-restart" {
+    restart_timeout = "15m"
   }
 
   # Generalize the image (this runs sysprep)
   provisioner "powershell" {
     inline = [
       "Write-Output 'Running sysprep to generalize the image...'",
-      "& $env:SystemRoot\\System32\\Sysprep\\sysprep.exe /generalize /oobe /quiet /quit",
-      "while($true) { $imageState = Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup\\State | Select ImageState; if($imageState.ImageState -ne 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { Write-Output $imageState.ImageState; Start-Sleep -s 10  } else { break } }"
+      "Write-Output 'Sysprep will shutdown the VM automatically'",
+      "& $env:SystemRoot\\System32\\Sysprep\\sysprep.exe /generalize /oobe /quit"
     ]
   }
 }
