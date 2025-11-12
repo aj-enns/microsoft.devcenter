@@ -1,0 +1,1 @@
+I am trying to make a public repository to show how to deploy dev box using terraform.  REmember the focus is building a repeatable process.

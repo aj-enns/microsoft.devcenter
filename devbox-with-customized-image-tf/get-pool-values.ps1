@@ -180,14 +180,69 @@ az devcenter admin attached-network create ``
     --name "$networkConnectionName" ``
     --dev-center "$devCenterName" ``
     --resource-group "$resourceGroup" ``
-    --network-connection-id "$networkConnectionId"
+    --network-connection-id "$networkConnectionId" 2>`$null
 
-if (`$LASTEXITCODE -eq 0) {
-    Write-Host "✅ Network attached successfully`n" -ForegroundColor Green
-    Write-Host "⏳ Waiting 30 seconds for network to propagate..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 30
+if (`$LASTEXITCODE -eq 0 -or `$LASTEXITCODE -eq 1) {
+    Write-Host "✅ Network attached (or already attached)`n" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  Network may already be attached or failed to attach`n" -ForegroundColor Yellow
+    Write-Host "⚠️  Warning: Network attachment returned exit code `$LASTEXITCODE`n" -ForegroundColor Yellow
+}
+
+# Step 2: Wait for Network Connection Health Check
+Write-Host "🔍 Checking network connection health status..." -ForegroundColor Yellow
+Write-Host "   Note: The network health check can take 5-10 minutes to pass." -ForegroundColor Gray
+Write-Host "   Common reasons for failure:" -ForegroundColor Gray
+Write-Host "   - Network connection not yet validated by Azure" -ForegroundColor Gray
+Write-Host "   - Subnet configuration issues" -ForegroundColor Gray
+Write-Host "   - DNS or domain join settings`n" -ForegroundColor Gray
+
+`$maxAttempts = 20
+`$attemptCount = 0
+`$healthCheckPassed = `$false
+
+while (`$attemptCount -lt `$maxAttempts -and -not `$healthCheckPassed) {
+    `$attemptCount++
+    Write-Host "   Attempt `$attemptCount/`$maxAttempts..." -ForegroundColor Cyan
+    
+    `$networkStatus = az devcenter admin attached-network show ``
+        --name "$networkConnectionName" ``
+        --dev-center "$devCenterName" ``
+        --resource-group "$resourceGroup" 2>`$null | ConvertFrom-Json
+    
+    if (`$networkStatus.healthCheckStatus -eq "Passed") {
+        `$healthCheckPassed = `$true
+        Write-Host "✅ Network health check passed!`n" -ForegroundColor Green
+        break
+    } elseif (`$networkStatus.healthCheckStatus -eq "Failed") {
+        Write-Host "   ⚠️  Health check status: Failed (attempt `$attemptCount/`$maxAttempts)" -ForegroundColor Yellow
+        if (`$attemptCount -lt `$maxAttempts) {
+            Write-Host "   Waiting 30 seconds before retry..." -ForegroundColor Gray
+            Start-Sleep -Seconds 30
+        }
+    } else {
+        Write-Host "   ℹ️  Health check status: `$(`$networkStatus.healthCheckStatus) (attempt `$attemptCount/`$maxAttempts)" -ForegroundColor Gray
+        if (`$attemptCount -lt `$maxAttempts) {
+            Write-Host "   Waiting 30 seconds before retry..." -ForegroundColor Gray
+            Start-Sleep -Seconds 30
+        }
+    }
+}
+
+if (-not `$healthCheckPassed) {
+    Write-Host "`n⚠️  WARNING: Network health check has not passed after `$(`$maxAttempts * 30) seconds." -ForegroundColor Yellow
+    Write-Host "   This usually indicates a network configuration issue." -ForegroundColor Yellow
+    Write-Host "`n   Troubleshooting steps:" -ForegroundColor Cyan
+    Write-Host "   1. Check the network connection in Azure Portal:" -ForegroundColor White
+    Write-Host "      https://portal.azure.com/#view/Microsoft_Azure_DevCenter/NetworkConnectionMenuBlade/~/overview/resourceId/%2Fsubscriptions%2F$subscriptionId%2FresourceGroups%2F$resourceGroup%2Fproviders%2FMicrosoft.DevCenter%2FnetworkConnections%2F$networkConnectionName" -ForegroundColor Gray
+    Write-Host "   2. Verify the subnet has proper DNS and connectivity" -ForegroundColor White
+    Write-Host "   3. Ensure no network policies are blocking DevCenter`n" -ForegroundColor White
+    
+    `$continue = Read-Host "Do you want to attempt creating pools anyway? (y/N)"
+    if (`$continue -ne "y" -and `$continue -ne "Y") {
+        Write-Host "`n❌ Exiting. Fix network issues and run this script again.`n" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "`n⚠️  Proceeding despite health check failure...`n" -ForegroundColor Yellow
 }
 
 "@
@@ -217,11 +272,14 @@ if (`$LASTEXITCODE -eq 0) {
     
     $scriptContent += @"
 
-Write-Host "`n🎉 Pool creation complete!" -ForegroundColor Green
+Write-Host "`n🎉 Pool creation process complete!" -ForegroundColor Green
 Write-Host "`n📋 Next Steps:" -ForegroundColor Cyan
-Write-Host "  1. Wait 5-10 minutes for pools to finish provisioning" -ForegroundColor White
-Write-Host "  2. Go to https://devbox.microsoft.com" -ForegroundColor White
-Write-Host "  3. Sign in and create your Dev Box`n" -ForegroundColor White
+Write-Host "  1. Check pool status in Azure Portal or run:" -ForegroundColor White
+Write-Host "     az devcenter admin pool list --project-name $projectName --resource-group $resourceGroup" -ForegroundColor Gray
+Write-Host "  2. If pools failed, check network connection health:" -ForegroundColor White
+Write-Host "     az devcenter admin network-connection show --name $networkConnectionName --resource-group $resourceGroup" -ForegroundColor Gray
+Write-Host "  3. Once pools are provisioned, go to https://devbox.microsoft.com" -ForegroundColor White
+Write-Host "  4. Sign in and create your Dev Box`n" -ForegroundColor White
 "@
     
     Set-Content -Path "create-pools.ps1" -Value $scriptContent

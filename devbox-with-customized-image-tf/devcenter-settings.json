@@ -9,7 +9,7 @@
         {
             "name": "win11-intellij-wsl-dev",
             "compute": "8c-32gb",
-            "storage": "512gb",
+            "storage": "256gb",
             "imageType": "IntelliJDevImage"
         }
     ],

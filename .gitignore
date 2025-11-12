@@ -4,7 +4,6 @@
 *.tfvars
 !*.tfvars.example
 .terraform/
-.terraform.lock.hcl
 crash.log
 crash.*.log
 override.tf
@@ -13,6 +12,10 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+create-pools.ps1
+
+# Note: .terraform.lock.hcl SHOULD be committed to version control
+# It ensures consistent provider versions across environments
 
 # Packer
 packer_cache/
