@@ -101,6 +101,18 @@ This configuration creates:
 
 ## Important Notes
 
+### Network Connectivity Requirements
+
+**NAT Gateway for Outbound Connectivity**: This configuration includes a NAT Gateway by default to provide secure outbound internet connectivity. This is **required** for:
+- Azure DevCenter network health checks
+- Connectivity to Azure Active Directory
+- Access to Windows 365 and DevCenter service endpoints
+- Software updates and telemetry
+
+The NAT Gateway is enabled by default (`enable_nat_gateway = true`). If you have an existing outbound connectivity solution (e.g., Azure Firewall), you can disable it by setting `enable_nat_gateway = false` in your `terraform.tfvars`.
+
+**Important**: Without proper outbound connectivity, the network connection health check will fail, and you won't be able to create Dev Box pools.
+
 ### Image Creation with Packer
 
 This configuration now uses **Packer** instead of Azure Image Builder for creating custom images. This provides better infrastructure-as-code practices and more flexibility.
@@ -180,12 +192,19 @@ cd ..
 .\02-create-definitions.ps1
 ```
 
-This script reads your Terraform state and `devcenter-settings.json` to create DevBox definitions using the DevCenter gallery images.
+This script:
+1. Reads your Terraform state and `devcenter-settings.json`
+2. Creates DevBox definitions using the DevCenter gallery images
+3. Updates the project to allow 10 dev boxes per user (required for users to create Dev Boxes)
 
 **Creates:**
 
 - `win11-vs2022-vscode-openai` (CustomizedImage, 8c-32gb, 256GB SSD)
 - `win11-intellij-wsl-dev` (IntelliJDevImage, 8c-32gb, 256GB SSD)
+
+**Configures:**
+
+- Project max dev boxes per user: 10 (default limit)
 
 ---
 

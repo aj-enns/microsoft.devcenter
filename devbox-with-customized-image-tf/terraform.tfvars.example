@@ -19,6 +19,9 @@ suffix              = "default"
 # network_vnet_address_prefixes   = "10.4.0.0/16"
 # network_subnet_address_prefixes = "10.4.0.0/24"
 
+# Optional: Network configuration
+# enable_nat_gateway = true  # Default: true. Provides outbound connectivity required for DevCenter health checks
+
 # Optional: Override default image settings
 # image_gallery_name     = "gal_devbox_test"
 # image_definition_name  = "CustomizedImage"

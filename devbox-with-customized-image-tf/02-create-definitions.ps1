@@ -109,4 +109,35 @@ foreach ($def in $devCenterSettings.customizedImageDevboxdefinitions) {
 }
 
 Write-Host "`n✓ DevBox definitions creation complete" -ForegroundColor Green
+
+# Update project to allow dev box creation
+Write-Host "`n📝 Updating project settings..." -ForegroundColor Yellow
+
+$projectName = ($state.resources | Where-Object { $_.type -eq "azurerm_dev_center_project" } | Select-Object -First 1).instances[0].attributes.name
+
+# Try to get value from tfvars, otherwise use default
+$maxDevBoxesPerUser = 10  # Default limit
+if (Test-Path "terraform.tfvars") {
+    $tfvarsContent = Get-Content "terraform.tfvars" -Raw
+    if ($tfvarsContent -match 'max_dev_boxes_per_user\s*=\s*(\d+)') {
+        $maxDevBoxesPerUser = [int]$Matches[1]
+    }
+}
+
+Write-Host "  Setting max dev boxes per user to $maxDevBoxesPerUser..." -ForegroundColor Cyan
+
+$updateCmd = "az devcenter admin project update " +
+           "--name `"$projectName`" " +
+           "--resource-group `"$resourceGroup`" " +
+           "--max-dev-boxes-per-user $maxDevBoxesPerUser"
+
+$output = & cmd /c $updateCmd '2>&1'
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "  ✓ Project updated successfully" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠️  Warning: Failed to update project settings" -ForegroundColor Yellow
+    Write-Host "  You can update manually with:" -ForegroundColor Gray
+    Write-Host "    az devcenter admin project update --name $projectName --resource-group $resourceGroup --max-dev-boxes-per-user 10" -ForegroundColor Gray
+}
+
 Write-Host "`nYou can now run 03-create-pools.ps1 to create the pools" -ForegroundColor Yellow

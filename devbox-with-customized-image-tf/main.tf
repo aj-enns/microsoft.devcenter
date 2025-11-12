@@ -92,6 +92,7 @@ module "vnet" {
   location                  = var.location
   vnet_address_prefixes     = var.network_vnet_address_prefixes
   subnet_address_prefixes   = var.network_subnet_address_prefixes
+  enable_nat_gateway        = var.enable_nat_gateway
 }
 
 # User Assigned Managed Identity

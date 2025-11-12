@@ -216,6 +216,9 @@ resource "azurerm_dev_center_project" "main" {
   resource_group_name = var.resource_group_name
   location           = var.location
   dev_center_id      = azurerm_dev_center.main.id
+  
+  # Note: max_dev_boxes_per_user not yet supported in Terraform provider
+  # Set this manually via: az devcenter admin project update --name <project> --resource-group <rg> --max-dev-boxes-per-user 10
 }
 
 # Note: DevCenter project pools may not be fully supported in current Terraform provider

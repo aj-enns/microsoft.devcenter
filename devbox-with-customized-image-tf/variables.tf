@@ -126,3 +126,15 @@ variable "enable_packer_build" {
   type        = bool
   default     = true
 }
+
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for outbound connectivity (required for DevCenter network health checks)"
+  type        = bool
+  default     = true
+}
+
+variable "max_dev_boxes_per_user" {
+  description = "Maximum number of dev boxes each user can create (set via Azure CLI in step 2)"
+  type        = number
+  default     = 10
+}
