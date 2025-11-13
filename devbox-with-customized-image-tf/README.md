@@ -77,9 +77,10 @@ This configuration creates:
    - Adjust pool configurations
    - Change administrator settings
 
-4. **Customize image installation** in `modules/gallery/main.tf`:
-   - Modify the `customized_commands` local variable
-   - Add/remove software installations in the PowerShell commands
+4. **Customize image software** in Packer configuration files:
+   - **VS Code image**: Edit `packer/windows-devbox.pkr.hcl`
+   - **IntelliJ image**: Edit `packer/intellij-devbox.pkr.hcl`
+   - Add/remove software installations in the Chocolatey provisioner sections
 
 ## Deployment
 
@@ -319,20 +320,48 @@ The configuration automatically creates necessary role assignments:
 
 ### Adding Software to the Image
 
-Modify the `customized_commands` in `modules/gallery/main.tf`:
+Edit the Packer configuration files to add software via Chocolatey:
+
+**For VS Code focused image** (`packer/windows-devbox.pkr.hcl`):
 
 ```hcl
-customized_commands = [
-  {
-    type = "PowerShell"
-    name = "Install Custom Software"
-    inline = [
-      "# Add your custom installation commands here",
-      "choco install -y your-package",
-      "# Additional setup commands"
-    ]
-  }
-]
+# Install development tools via Chocolatey
+provisioner "powershell" {
+  inline = [
+    "Write-Output 'Installing development tools...'",
+    "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
+    "choco install -y git --params '/GitAndUnixToolsOnPath /NoAutoCrlf'",
+    "choco install -y azure-cli",
+    "choco install -y vscode",
+    # Add your custom software here
+    "choco install -y your-package"
+  ]
+  valid_exit_codes = [0, 3010]
+}
+```
+
+**For IntelliJ focused image** (`packer/intellij-devbox.pkr.hcl`):
+
+```hcl
+# Install development tools via Chocolatey
+provisioner "powershell" {
+  inline = [
+    "Write-Output 'Installing development tools...'",
+    "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
+    "choco install -y git --params '/GitAndUnixToolsOnPath /NoAutoCrlf'",
+    # Add your custom software here
+    "choco install -y your-package"
+  ]
+  valid_exit_codes = [0, 3010]
+}
+```
+
+After editing, rebuild the image with:
+
+```powershell
+cd packer
+.\build-image.ps1 -ImageType windows -Action all    # For VS Code image
+.\build-image.ps1 -ImageType intellij -Action all   # For IntelliJ image
 ```
 
 ### Changing Compute Sizes

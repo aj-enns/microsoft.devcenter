@@ -21,16 +21,6 @@ variable "image_definitions" {
   ]
 }
 
-variable "image_template_name" {
-  description = "The name of image template for customized image"
-  type        = string
-}
-
-variable "template_identity_name" {
-  description = "The name of image template identity"
-  type        = string
-}
-
 variable "location" {
   description = "Primary location for all resources"
   type        = string
@@ -41,29 +31,8 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "guid_id" {
-  description = "The guid id that generates the different name for image build name"
-  type        = string
-}
-
 # Data source for current client configuration
 data "azurerm_client_config" "current" {}
-
-locals {
-  # Reference commands that are now implemented in Packer
-  customized_commands = [
-    {
-      type = "PowerShell"
-      name = "Install Choco and other tools (now in Packer)"
-      inline = [
-        "Set-ExecutionPolicy Bypass -Scope Process -Force",
-        "Install Chocolatey, Git, Azure CLI, VS Code, etc.",
-        "Configure VS Code extensions including GitHub Copilot",
-        "See packer/windows-devbox.pkr.hcl for full implementation"
-      ]
-    }
-  ]
-}
 
 # Compute Gallery
 resource "azurerm_shared_image_gallery" "main" {
@@ -92,24 +61,14 @@ resource "azurerm_shared_image" "main" {
   }
 }
 
-# Note: Template identity and role assignments removed since we're using Packer
-# Packer will use your Azure authentication (az login or service principal)
-# to build and publish images to the gallery
-
-# Note: Image creation is now handled by Packer
-# Run the Packer build from the packer/ directory to create the customized image
-# The Packer configuration will build the image and store it in this gallery
+# Note: Image versions are created by Packer, not Terraform
+# This module creates the gallery infrastructure (gallery + image definitions)
+# Packer builds and publishes actual image versions to these definitions
 #
-# To build the image:
-# 1. cd packer/
-# 2. Copy variables.pkrvars.hcl.example to variables.pkrvars.hcl and customize
-# 3. Run: .\build-image.ps1 -Action all
-#
-# The Packer build includes:
-# ${join("\n# ", [for cmd in local.customized_commands : "${cmd.name}: ${join(", ", cmd.inline)}"])}
-
-# The gallery and image definition are created by Terraform
-# Packer will create image versions in this gallery
+# To build images:
+#   cd packer/
+#   .\build-image.ps1 -ImageType windows -Action all
+#   .\build-image.ps1 -ImageType intellij -Action all
 
 output "gallery_name" {
   description = "The name of the compute gallery"
@@ -129,9 +88,4 @@ output "image_definitions" {
 output "template_identity_id" {
   description = "Not used with Packer - Packer uses your Azure authentication"
   value       = null
-}
-
-output "image_template_name" {
-  description = "The name of the image template"
-  value       = var.image_template_name
 }

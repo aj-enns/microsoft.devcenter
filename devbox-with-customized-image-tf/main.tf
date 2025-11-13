@@ -110,7 +110,7 @@ module "gallery" {
   location              = var.location
   resource_group_name   = azurerm_resource_group.main.name
   
-  # Multiple image definitions
+  # Multiple image definitions - Packer will create versions in these definitions
   image_definitions = [
     {
       name        = "CustomizedImage"
@@ -125,10 +125,6 @@ module "gallery" {
       sku         = "win11-22h2-ent-cpc-m365-intellij"
     }
   ]
-  
-  image_template_name   = var.image_template_name
-  template_identity_name = "${local.abbreviations.managed_identity_user_assigned_identities}tpl-${local.resource_token}"
-  guid_id               = random_uuid.guid_id.result
 }
 
 # DevCenter Module
