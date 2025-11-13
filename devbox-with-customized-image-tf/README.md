@@ -20,6 +20,9 @@ cd ..
 
 # Step 3: Create pools (also attaches network)
 .\03-create-pools.ps1
+
+# Step 4 (OPTIONAL): Configure Intune enrollment
+.\04-configure-intune.ps1
 ```
 
 ## Overview
@@ -32,6 +35,7 @@ This configuration creates:
 - User Assigned Managed Identity
 - DevCenter with network connection
 - DevCenter project with DevBox definitions and pools
+- Optional: Intune enrollment configuration for device management (Step 4)
 
 ## Prerequisites
 
@@ -232,7 +236,65 @@ This script:
 
 ---
 
-#### Step 4: Access Your Dev Boxes
+#### Step 4: Configure Intune Enrollment (OPTIONAL)
+
+**This step is completely optional!** Run this only if you want Dev Boxes to automatically enroll in Microsoft Intune for device management.
+
+```powershell
+# Run the configuration checker
+.\04-configure-intune.ps1
+
+# Or skip certain checks
+.\04-configure-intune.ps1 -SkipAADCheck
+```
+
+**Prerequisites:**
+- Azure AD Premium P1/P2 licenses
+- Microsoft Intune licenses for users
+- Global Administrator or Intune Administrator role
+
+**What this does:**
+1. Verifies Azure AD automatic MDM enrollment is configured
+2. Checks that network connection uses Azure AD Join (required for Intune)
+3. Validates Dev Center provisioning settings
+4. Provides guidance on Intune policy configuration
+
+**Important Notes:**
+- ✅ **No image changes required** - Intune enrollment happens during Dev Box provisioning, not in the image
+- ✅ **Can be added later** - You can enable Intune months after initial deployment
+- ✅ **Infrastructure-level** - Controlled by network connection settings and Azure AD config
+- ⚠️ **Requires licenses** - Users must have Azure AD Premium and Intune licenses
+
+**You can skip this if:**
+- You don't have Intune licenses
+- You don't need device management/compliance policies  
+- You want to add Intune integration later
+
+**Testing Intune Enrollment:**
+
+After provisioning a Dev Box, connect to it and verify enrollment:
+
+```powershell
+dsregcmd /status
+```
+
+Look for:
+```
+AzureAdJoined : YES
+MDMUrl : https://enrollment.manage.microsoft.com/...
+```
+
+**Configuring Intune Policies:**
+
+Once enrolled, manage Dev Boxes via Microsoft Endpoint Manager (https://endpoint.microsoft.com):
+- **Compliance Policies** - Require encryption, antivirus, etc.
+- **Configuration Profiles** - Deploy settings and apps
+- **Security Baselines** - Apply Microsoft security recommendations
+- **Update Policies** - Manage Windows updates
+
+---
+
+#### Step 5: Access Your Dev Boxes
 
 Users can now create Dev Boxes:
 
