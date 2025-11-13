@@ -13,6 +13,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 create-pools.ps1
+cleanup-devboxes.ps1
 
 # Note: .terraform.lock.hcl SHOULD be committed to version control
 # It ensures consistent provider versions across environments
