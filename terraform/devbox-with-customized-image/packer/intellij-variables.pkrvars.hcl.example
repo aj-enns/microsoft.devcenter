@@ -1,0 +1,21 @@
+# Packer variables file for IntelliJ DevBox Image
+# Copy this to intellij-variables.pkrvars.hcl and customize with your values
+
+# Azure authentication (using Azure CLI)
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id      = "00000000-0000-0000-0000-000000000000"
+
+# Azure resources  
+resource_group_name    = "rg-devbox-your-resource-group"
+gallery_name          = "your-gallery-name"
+image_definition_name = "IntelliJDevImage"
+location             = "eastus"
+
+# Image configuration
+image_version = "1.0.0"
+vm_size      = "Standard_D4s_v3"  # Larger VM for IntelliJ builds
+
+# Base image (Windows 11 Enterprise with Microsoft 365)
+image_publisher = "MicrosoftWindowsDesktop" 
+image_offer    = "windows-ent-cpc"
+image_sku      = "win11-22h2-ent-cpc-m365"

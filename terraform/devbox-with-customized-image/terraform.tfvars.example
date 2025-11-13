@@ -1,0 +1,34 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and update with your specific values
+
+resource_group_name  = "rg-devbox-learn-demo"
+user_principal_id    = "your-user-or-service-principal-id"
+user_principal_type  = "User" # or "ServicePrincipal" or "Group"
+location            = "eastus"
+suffix              = "default"
+
+# Optional: Override default resource names
+# devcenter_name           = "dc-devbox-test"
+# project_name             = "dcprj-devbox-test"
+# network_connection_name  = "con-devbox-test"
+# user_identity_name       = "id-devbox-test"
+# network_vnet_name        = "vnet-devbox-test"
+# network_subnet_name      = "snet-devbox-test"
+
+# Optional: Override default network settings
+# network_vnet_address_prefixes   = "10.4.0.0/16"
+# network_subnet_address_prefixes = "10.4.0.0/24"
+
+# Optional: Network configuration
+# enable_nat_gateway = true  # Default: true. Provides outbound connectivity required for DevCenter health checks
+
+# Optional: Override default image settings
+# image_gallery_name     = "gal_devbox_test"
+# image_definition_name  = "CustomizedImage"
+# image_template_name    = "CustomizedImageTemplate"
+# image_offer           = "windows-ent-cpc"
+# image_publisher       = "MicrosoftWindowsDesktop"
+# image_sku             = "win11-22h2-ent-cpc-m365"
+
+# Optional: Use existing subnet
+# existing_subnet_id = "/subscriptions/your-subscription-id/resourceGroups/your-rg/providers/Microsoft.Network/virtualNetworks/your-vnet/subnets/your-subnet"
