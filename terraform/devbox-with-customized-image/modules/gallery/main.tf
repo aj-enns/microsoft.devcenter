@@ -13,7 +13,7 @@ variable "image_definitions" {
   }))
   default = [
     {
-      name      = "CustomizedImage"
+      name      = "VisualStudioImage"
       offer     = "windows-ent-cpc"
       publisher = "MicrosoftWindowsDesktop"
       sku       = "win11-22h2-ent-cpc-m365"

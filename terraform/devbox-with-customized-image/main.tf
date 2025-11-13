@@ -113,7 +113,7 @@ module "gallery" {
   # Multiple image definitions - Packer will create versions in these definitions
   image_definitions = [
     {
-      name        = "CustomizedImage"
+      name        = "VisualStudioImage"
       offer       = "windows-ent-cpc"
       publisher   = "MicrosoftWindowsDesktop" 
       sku         = "win11-22h2-ent-cpc-m365-vscode"
