@@ -47,9 +47,6 @@ resource "random_string" "resource_token" {
   upper   = false
 }
 
-# Random UUID for image template GUID
-resource "random_uuid" "guid_id" {}
-
 # Local values for resource naming
 locals {
   abbreviations = {
@@ -72,13 +69,8 @@ locals {
   devcenter_name = var.devcenter_name != "" ? var.devcenter_name : "${local.abbreviations.devcenter}${local.resource_token}"
   project_name   = var.project_name != "" ? var.project_name : "${local.abbreviations.devcenter_project}${local.resource_token}"
   
-  image_gallery_name = var.image_gallery_name != "" ? var.image_gallery_name : "${local.abbreviations.compute_galleries}${local.resource_token}"
-  
   vnet_name   = var.network_vnet_name != "" ? var.network_vnet_name : "${local.abbreviations.network_virtual_networks}${local.resource_token}"
   subnet_name = var.network_subnet_name != "" ? var.network_subnet_name : "${local.abbreviations.network_virtual_networks_subnets}${local.resource_token}"
-  
-  # Load devcenter settings
-  devcenter_settings = jsondecode(file("${path.module}/devcenter-settings.json"))
 }
 
 # Virtual Network Module
@@ -102,31 +94,6 @@ resource "azurerm_user_assigned_identity" "main" {
   location            = var.location
 }
 
-# Compute Gallery Module
-module "gallery" {
-  source = "./modules/gallery"
-  
-  gallery_name           = local.image_gallery_name
-  location              = var.location
-  resource_group_name   = azurerm_resource_group.main.name
-  
-  # Multiple image definitions - Packer will create versions in these definitions
-  image_definitions = [
-    {
-      name        = "VisualStudioImage"
-      offer       = "windows-ent-cpc"
-      publisher   = "MicrosoftWindowsDesktop" 
-      sku         = "win11-22h2-ent-cpc-m365-vscode"
-    },
-    {
-      name        = "IntelliJDevImage"
-      offer       = "windows-ent-cpc"
-      publisher   = "MicrosoftWindowsDesktop"
-      sku         = "win11-22h2-ent-cpc-m365-intellij"
-    }
-  ]
-}
-
 # DevCenter Module
 module "devcenter" {
   source = "./modules/devcenter"
@@ -140,59 +107,7 @@ module "devcenter" {
   networking_resource_group_name = "${local.abbreviations.devcenter_networking_resource_group}${local.nc_name}-${var.location}"
   principal_id                   = var.user_principal_id
   principal_type                 = var.user_principal_type
-  gallery_name                   = module.gallery.gallery_name
   managed_identity_id            = azurerm_user_assigned_identity.main.id
   managed_identity_principal_id  = azurerm_user_assigned_identity.main.principal_id
-  image_definition_name          = var.image_definition_name
-  image_template_name            = var.image_template_name
-  template_identity_id           = module.gallery.template_identity_id
-  guid_id                        = random_uuid.guid_id.result
-  devcenter_settings            = local.devcenter_settings
-  
-  depends_on = [
-    module.gallery
-  ]
 }
 
-# Packer image build automation for VS Code image (optional)
-resource "null_resource" "packer_build_vscode" {
-  count = var.enable_packer_build ? 1 : 0
-
-  # Trigger rebuild when Packer configuration changes
-  triggers = {
-    packer_config_hash = filemd5("${path.module}/packer/windows-devbox.pkr.hcl")
-    variables_hash     = filemd5("${path.module}/packer/variables.pkrvars.hcl")
-  }
-
-  # Build the VS Code custom image with Packer
-  provisioner "local-exec" {
-    command     = "powershell.exe -ExecutionPolicy Bypass -File build-image.ps1 -Action Build -ImageType vscode"
-    working_dir = "${path.module}/packer"
-  }
-
-  depends_on = [
-    module.gallery
-  ]
-}
-
-# Packer image build automation for IntelliJ image (optional)
-resource "null_resource" "packer_build_intellij" {
-  count = var.enable_packer_build ? 1 : 0
-
-  # Trigger rebuild when Packer configuration changes
-  triggers = {
-    packer_config_hash = filemd5("${path.module}/packer/intellij-devbox.pkr.hcl")
-    variables_hash     = filemd5("${path.module}/packer/intellij-variables.pkrvars.hcl")
-  }
-
-  # Build the IntelliJ custom image with Packer
-  provisioner "local-exec" {
-    command     = "powershell.exe -ExecutionPolicy Bypass -File build-image.ps1 -Action Build -ImageType intellij"
-    working_dir = "${path.module}/packer"
-  }
-
-  depends_on = [
-    module.gallery,
-    null_resource.packer_build_vscode
-  ]
-}
