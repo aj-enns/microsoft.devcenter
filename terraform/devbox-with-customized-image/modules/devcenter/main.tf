@@ -115,7 +115,7 @@ locals {
   
   # Map image types to their actual image references
   image_references = {
-    "CustomizedImage"   = "${azurerm_dev_center.main.id}/galleries/${var.gallery_name}/images/CustomizedImage"
+    "VisualStudioImage"   = "${azurerm_dev_center.main.id}/galleries/${var.gallery_name}/images/VisualStudioImage"
     "IntelliJDevImage" = "${azurerm_dev_center.main.id}/galleries/${var.gallery_name}/images/IntelliJDevImage"
     # Default to built-in VS2022 if no image type specified
     "default"          = "${azurerm_dev_center.main.id}/galleries/default/images/microsoftvisualstudio_visualstudioplustools_vs-2022-ent-general-win11-m365-gen2"
