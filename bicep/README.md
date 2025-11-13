@@ -2,6 +2,9 @@
 
 This folder contains Azure Bicep examples for deploying Dev Box and Deployment Environments infrastructure.
 
+> **Attribution:** These examples are based on the official Azure quickstart templates:  
+> [Azure Quickstart Templates - Microsoft DevCenter](https://github.com/Azure/azure-quickstart-templates/tree/master/quickstarts/microsoft.devcenter)
+
 ## 📚 Available Examples
 
 ### 🚀 [devbox-quick-start](./devbox-quick-start/)
