@@ -190,7 +190,11 @@ cd ..
 
 #### Step 2: Create DevBox Definitions
 
-**Why:** DevBox definitions link the custom images to compute SKUs and storage sizes.
+**Why is this script needed?**
+
+DevBox definitions are the templates that link your custom images to specific compute and storage configurations. Unfortunately, the Terraform AzureRM provider doesn't fully support creating DevBox definitions yet, so we use Azure CLI via this PowerShell script as a workaround.
+
+**What it does:**
 
 ```powershell
 # Run the automated script
@@ -198,9 +202,14 @@ cd ..
 ```
 
 This script:
-1. Reads your Terraform state and `devcenter-settings.json`
-2. Creates DevBox definitions using the DevCenter gallery images
-3. Updates the project to allow 10 dev boxes per user (required for users to create Dev Boxes)
+1. Reads your Terraform state and `devcenter-settings.json` to get resource names
+2. Waits for image versions to be available in the gallery (checks every 30 seconds)
+3. Creates DevBox definitions using Azure CLI commands
+4. Links each definition to:
+   - A custom image (CustomizedImage or IntelliJDevImage)
+   - A compute SKU (e.g., 8 cores, 32GB RAM)
+   - Storage size (e.g., 256GB SSD)
+5. Updates the project's max dev boxes per user setting (default: 10)
 
 **Creates:**
 
@@ -209,7 +218,9 @@ This script:
 
 **Configures:**
 
-- Project max dev boxes per user: 10 (default limit)
+- Project max dev boxes per user: 10 (without this, users can't create any Dev Boxes)
+
+**Important:** Wait for Packer builds to complete before running this script. It will check for image versions and wait if they're not ready yet.
 
 ---
 
