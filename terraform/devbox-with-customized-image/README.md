@@ -190,7 +190,11 @@ cd ..
 
 #### Step 2: Create DevBox Definitions
 
-**Why:** DevBox definitions link the custom images to compute SKUs and storage sizes.
+**Why is this script needed?**
+
+DevBox definitions are the templates that link your custom images to specific compute and storage configurations. Unfortunately, the Terraform AzureRM provider doesn't fully support creating DevBox definitions yet, so we use Azure CLI via this PowerShell script as a workaround.
+
+**What it does:**
 
 ```powershell
 # Run the automated script
@@ -198,9 +202,14 @@ cd ..
 ```
 
 This script:
-1. Reads your Terraform state and `devcenter-settings.json`
-2. Creates DevBox definitions using the DevCenter gallery images
-3. Updates the project to allow 10 dev boxes per user (required for users to create Dev Boxes)
+1. Reads your Terraform state and `devcenter-settings.json` to get resource names
+2. Waits for image versions to be available in the gallery (checks every 30 seconds)
+3. Creates DevBox definitions using Azure CLI commands
+4. Links each definition to:
+   - A custom image (CustomizedImage or IntelliJDevImage)
+   - A compute SKU (e.g., 8 cores, 32GB RAM)
+   - Storage size (e.g., 256GB SSD)
+5. Updates the project's max dev boxes per user setting (default: 10)
 
 **Creates:**
 
@@ -209,7 +218,9 @@ This script:
 
 **Configures:**
 
-- Project max dev boxes per user: 10 (default limit)
+- Project max dev boxes per user: 10 (without this, users can't create any Dev Boxes)
+
+**Important:** Wait for Packer builds to complete before running this script. It will check for image versions and wait if they're not ready yet.
 
 ---
 
@@ -217,15 +228,26 @@ This script:
 
 **Why:** Pools allow users to provision Dev Boxes from the definitions. This step also attaches the network connection to the DevCenter.
 
+**Why is this script needed?**
+
+DevBox pools are what users actually provision from. They combine definitions, networking, and regions. Similar to Step 2, the Terraform AzureRM provider doesn't fully support pool creation or network attachment yet, so we use this script as a workaround.
+
+**What it does:**
+
 ```powershell
 # Run the automated script - it will generate a personalized script
 .\03-create-pools.ps1
 ```
 
 This script:
+
 1. Generates a personalized `create-pools.ps1` script with your specific values from Terraform state
-2. Attaches the network connection to the DevCenter
+2. **Attaches the network connection** to the DevCenter (critical - without this, Dev Boxes can't connect to Azure resources or domain join for Intune)
 3. Creates the Dev Box pools configured in `devcenter-settings.json`
+4. Configures each pool with:
+   - The region (e.g., westus2)
+   - The network connection (for Azure/on-premises connectivity)
+   - Auto-stop schedule (default: 7 PM local time, timezone-aware)
 
 **Note:** The generated `create-pools.ps1` is not tracked in git to keep your specific values private.
 
@@ -235,11 +257,17 @@ This script:
 - `win11-vs2022-vscode-openai-pool`
 - `win11-intellij-wsl-dev-pool`
 
+**Important:** This step MUST complete before users can create Dev Boxes. The network attachment is especially critical if you plan to use Intune (Step 4).
+
 ---
 
 #### Step 4: Configure Intune Enrollment (OPTIONAL)
 
-**This step is completely optional!** Run this only if you want Dev Boxes to automatically enroll in Microsoft Intune for device management.
+**Why is this script needed?**
+
+This step is **completely optional**! Run this only if you want Dev Boxes to automatically enroll in Microsoft Intune for device management and compliance policies. This script validates your configuration and provides guidance - it doesn't make changes itself.
+
+**What it does:**
 
 ```powershell
 # Run the configuration checker
@@ -249,21 +277,26 @@ This script:
 .\04-configure-intune.ps1 -SkipAADCheck
 ```
 
+This script:
+
+1. **Verifies Azure AD automatic MDM enrollment** is configured (required for automatic Intune enrollment)
+2. **Checks network connection domain join type** is set to "AzureADJoin" (Intune requires Azure AD-joined devices)
+3. **Validates Dev Center provisioning settings** allow custom network configurations
+4. **Provides guidance** on Intune policy configuration and testing
+5. **Reports validation results** with clear next steps if configuration is incorrect
+
 **Prerequisites:**
+
 - Azure AD Premium P1/P2 licenses
 - Microsoft Intune licenses for users
 - Global Administrator or Intune Administrator role
 
-**What this does:**
-1. Verifies Azure AD automatic MDM enrollment is configured
-2. Checks that network connection uses Azure AD Join (required for Intune)
-3. Validates Dev Center provisioning settings
-4. Provides guidance on Intune policy configuration
-
 **Important Notes:**
+
 - ✅ **No image changes required** - Intune enrollment happens during Dev Box provisioning, not in the image
-- ✅ **Can be added later** - You can enable Intune months after initial deployment
-- ✅ **Infrastructure-level** - Controlled by network connection settings and Azure AD config
+- ✅ **Can be added later** - You can enable Intune months after initial deployment without rebuilding images
+- ✅ **Infrastructure-level** - Controlled by network connection settings (Step 1) and Azure AD config, not Packer
+- ⚠️ **Network attachment must be complete** - Run Step 3 first to attach the network connection to your Dev Center
 - ⚠️ **Requires licenses** - Users must have Azure AD Premium and Intune licenses
 
 **You can skip this if:**
