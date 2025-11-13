@@ -47,6 +47,9 @@ credentials/
 .DS_Store
 Thumbs.db
 
+# GitHub workflows and settings (keeping local only)
+.github/
+
 # Build artifacts
 bin/
 obj/
