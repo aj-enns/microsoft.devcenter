@@ -64,7 +64,7 @@ Write-Host "Step 2: Create Image Definitions" -ForegroundColor Yellow
 $imageDefinitions = @(
     @{
         name = "VSCodeImage"
-        offer = "visualstudio-ent-cpc"
+        offer = "windows-ent-cpc"
         publisher = "MicrosoftWindowsDesktop"
         sku = "win11-22h2-ent-cpc-m365-vscode"
     },
