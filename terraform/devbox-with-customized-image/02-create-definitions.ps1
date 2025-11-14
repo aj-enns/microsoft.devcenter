@@ -64,7 +64,7 @@ Write-Host "Step 2: Create Image Definitions" -ForegroundColor Yellow
 $imageDefinitions = @(
     @{
         name = "VSCodeImage"
-        offer = "visualstudio-ent-cpc"
+        offer = "windows-ent-cpc"
         publisher = "MicrosoftWindowsDesktop"
         sku = "win11-22h2-ent-cpc-m365-vscode"
     },
@@ -357,8 +357,8 @@ vm_size      = "Standard_D2s_v3"
 
 # Base image (Windows 11 Enterprise with Microsoft 365)
 image_publisher = "MicrosoftWindowsDesktop"
-image_offer    = "visualstudio-ent-cpc"
-image_sku      = "win11-22h2-ent-cpc-m365-vscode"
+image_offer    = "windows-ent-cpc"
+image_sku      = "win11-24h2-ent-cpc-m365"
 "@
     
     Set-Content -Path $vsVarsFile -Value $vsVarsContent
