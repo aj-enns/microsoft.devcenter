@@ -1,13 +1,19 @@
 {
     "customizedImageDevboxdefinitions": [
         {
-            "name": "win11-vs2022-vscode-openai",
+            "name": "VSCode-DevBox-8core-32gb",
             "compute": "8c-32gb",
             "storage": "256gb",
             "imageType": "default"
         },
         {
-            "name": "win11-intellij-wsl-dev",
+            "name": "VisualStudio-DevBox-8core-32gb",
+            "compute": "8c-32gb",
+            "storage": "256gb",
+            "imageType": "default"
+        },
+        {
+            "name": "IntelliJ-DevBox-8core-32gb",
             "compute": "8c-32gb",
             "storage": "256gb",
             "imageType": "default"
@@ -15,13 +21,18 @@
     ],
     "customizedImagePools": [
         {
-            "name": "win11-vs2022-vscode-openai-pool",
-            "definition": "win11-vs2022-vscode-openai",
+            "name": "VS Code Development",
+            "definition": "VSCode-DevBox-8core-32gb",
             "administrator": "Enabled"
         },
         {
-            "name": "win11-intellij-wsl-dev-pool",
-            "definition": "win11-intellij-wsl-dev",
+            "name": "Visual Studio 2022 Development",
+            "definition": "VisualStudio-DevBox-8core-32gb",
+            "administrator": "Enabled"
+        },
+        {
+            "name": "IntelliJ IDEA Development with WSL",
+            "definition": "IntelliJ-DevBox-8core-32gb",
             "administrator": "Enabled"
         }
     ]

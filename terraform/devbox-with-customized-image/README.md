@@ -35,12 +35,13 @@ terraform apply -var-file="terraform.tfvars" -auto-approve
 
 # Step 3: Build custom images with Packer (30-60 min each)
 cd packer
+.\build-image.ps1 -ImageType vscode -Action all
 .\build-image.ps1 -ImageType visualstudio -Action all
 .\build-image.ps1 -ImageType intellij -Action all
 cd ..
 
 # Step 4: Update devcenter-settings.json to use custom images
-# Change imageType to "VisualStudioImage" or "IntelliJDevImage"
+# Change imageType to "VSCodeImage", "VisualStudioImage", or "IntelliJDevImage"
 
 # Step 5: Re-run definitions script to use custom images
 .\02-create-definitions.ps1
@@ -109,11 +110,13 @@ The following are created via PowerShell scripts:
    - Change administrator settings
    - **Important**: Set `imageType` to control which images are used:
      - `"default"` - Uses built-in Visual Studio 2022 Enterprise image (no custom image build required)
-     - `"VisualStudioImage"` - Uses your custom VS Code-focused image (requires Packer build)
+     - `"VSCodeImage"` - Uses your custom VS Code-focused image (requires Packer build)
+     - `"VisualStudioImage"` - Uses your custom Visual Studio 2022 + VS Code image (requires Packer build)
      - `"IntelliJDevImage"` - Uses your custom IntelliJ-focused image (requires Packer build)
 
 4. **Customize image software** in Packer configuration files (optional, only if using custom images):
-   - **VS Code image**: Edit `packer/windows-devbox.pkr.hcl`
+   - **VS Code image**: Edit `packer/vscode-devbox.pkr.hcl`
+   - **Visual Studio image**: Edit `packer/visualstudio-devbox.pkr.hcl`
    - **IntelliJ image**: Edit `packer/intellij-devbox.pkr.hcl`
    - Add/remove software installations in the Chocolatey provisioner sections
 
@@ -223,7 +226,7 @@ This script creates the Azure Compute Gallery, image definitions, attaches the g
 
 This script:
 1. Creates an Azure Compute Gallery if it doesn't exist
-2. Creates image definitions (VisualStudioImage, IntelliJDevImage) in the gallery
+2. Creates image definitions (VSCodeImage, VisualStudioImage, IntelliJDevImage) in the gallery
 3. Attaches the gallery to the DevCenter
 4. Creates DevBox definitions based on `devcenter-settings.json`
 5. Supports both custom images and built-in VS2022 images (imageType: "default")
@@ -246,18 +249,25 @@ This script:
 ```powershell
 cd packer
 
-# Build VS Code focused image (30-60 minutes)
+# Build VS Code image (30-60 minutes)
+.\build-image.ps1 -ImageType vscode -Action all
+
+# Build Visual Studio 2022 + VS Code image (30-60 minutes)
 .\build-image.ps1 -ImageType visualstudio -Action all
 
 # Build IntelliJ + WSL image (30-60 minutes)
 .\build-image.ps1 -ImageType intellij -Action all
+
+# Or build all at once (90-180 minutes total)
+.\build-image.ps1 -ImageType all -Action all
 
 cd ..
 ```
 
 **What gets built:**
 
-- **VisualStudioImage**: Windows 11 with VS Code, Git, Azure CLI, Node.js, Python
+- **VSCodeImage**: Windows 11 with VS Code, Git, Azure CLI, Node.js, Python, .NET SDK, Docker, Terraform
+- **VisualStudioImage**: Windows 11 with Visual Studio 2022 Enterprise + VS Code, all dev tools from VSCodeImage
 - **IntelliJDevImage**: Windows 11 with IntelliJ IDEA Community, WSL2, Java, Maven
 
 **Alternative:** If you're using `imageType: "default"`, you can skip this step entirely and use the built-in Visual Studio 2022 Enterprise image that comes with Azure DevCenter.
@@ -294,8 +304,9 @@ This script:
 **Creates:**
 
 - Network attachment to DevCenter
-- `win11-vs2022-vscode-openai-pool`
-- `win11-intellij-wsl-dev-pool`
+- `VS Code Development` pool
+- `Visual Studio 2022 Development` pool
+- `IntelliJ IDEA Development` pool
 
 **Important:** This step MUST complete before users can create Dev Boxes. The network attachment is especially critical if you plan to use Intune (Step 4).
 
@@ -395,7 +406,7 @@ The configuration automatically creates necessary role assignments:
 
 Edit the Packer configuration files to add software via Chocolatey:
 
-**For VS Code focused image** (`packer/windows-devbox.pkr.hcl`):
+**For VS Code focused image** (`packer/vscode-devbox.pkr.hcl`):
 
 ```hcl
 # Install development tools via Chocolatey
@@ -433,8 +444,9 @@ After editing, rebuild the image with:
 
 ```powershell
 cd packer
-.\build-image.ps1 -ImageType visualstudio -Action all    # For VS Code image
-.\build-image.ps1 -ImageType intellij -Action all   # For IntelliJ image
+.\build-image.ps1 -ImageType vscode -Action all         # For VS Code image
+.\build-image.ps1 -ImageType visualstudio -Action all   # For Visual Studio image
+.\build-image.ps1 -ImageType intellij -Action all       # For IntelliJ image
 ```
 
 ### Changing Compute Sizes
