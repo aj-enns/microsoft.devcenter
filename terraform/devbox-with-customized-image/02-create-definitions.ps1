@@ -357,7 +357,7 @@ vm_size      = "Standard_D2s_v3"
 
 # Base image (Windows 11 Enterprise with Microsoft 365)
 image_publisher = "MicrosoftWindowsDesktop"
-image_offer    = "visualstudio-ent-cpc"
+image_offer    = "windows-ent-cpc"
 image_sku      = "win11-24h2-ent-cpc-m365"
 "@
     
