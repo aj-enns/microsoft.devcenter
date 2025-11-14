@@ -2,7 +2,8 @@
 
 This repository contains Infrastructure as Code (IaC) examples for deploying [Azure Dev Box](https://learn.microsoft.com/azure/dev-box/) and [Azure Deployment Environments](https://learn.microsoft.com/azure/deployment-environments/) using both Bicep and Terraform.
 
-> **Note:** The Bicep examples in this repository are based on the official Azure quickstart templates originally found at:  
+> **Note:** The Bicep examples in this repository are based on the official Azure quickstart templates originally found at:
+>   
 > [Azure Quickstart Templates - DevCenter](https://github.com/Azure/azure-quickstart-templates/tree/master/quickstarts/microsoft.devcenter)
 
 ## 🗂️ Repository Structure
