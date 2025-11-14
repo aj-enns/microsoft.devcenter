@@ -1,0 +1,21 @@
+# Packer variables file for Visual Studio DevBox Image
+# Copy this to visualstudio-variables.pkrvars.hcl and customize with your values
+
+# Azure authentication (using Azure CLI)
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id      = "00000000-0000-0000-0000-000000000000"
+
+# Azure resources
+resource_group_name    = "rg-devbox-your-resource-group"
+gallery_name          = "your-gallery-name"
+image_definition_name = "VisualStudioImage"
+location             = "eastus"
+
+# Image configuration
+image_version = "1.0.0"  # Increment this for new versions
+vm_size      = "Standard_D4s_v3"  # Larger VM size for Visual Studio
+
+# Base image (Windows 11 with Visual Studio 2022 Enterprise)
+image_publisher = "MicrosoftVisualStudio"
+image_offer    = "visualstudioplustools"
+image_sku      = "vs-2022-ent-general-win11-m365-gen2"
