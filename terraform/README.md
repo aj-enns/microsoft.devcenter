@@ -125,7 +125,14 @@ terraform apply -var-file="terraform.tfvars"
 cd packer
 cp variables.pkrvars.hcl.example variables.pkrvars.hcl
 # Edit variables file
+
+# VS Code Dev Box image
+.\build-image.ps1 -ImageType vscode -Action all
+
+# Visual Studio 2022 Dev Box image
 .\build-image.ps1 -ImageType visualstudio -Action all
+
+# IntelliJ Dev Box image
 .\build-image.ps1 -ImageType intellij -Action all
 ```
 
