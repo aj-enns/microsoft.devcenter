@@ -79,52 +79,10 @@ variable "network_subnet_address_prefixes" {
   default     = "10.4.0.0/24"
 }
 
-variable "image_gallery_name" {
-  description = "The name of Azure Compute Gallery"
-  type        = string
-  default     = ""
-}
-
-variable "image_definition_name" {
-  description = "The name of Azure Compute Gallery image definition"
-  type        = string
-  default     = "CustomizedImage"
-}
-
-variable "image_template_name" {
-  description = "The name of image template for customized image"
-  type        = string
-  default     = "CustomizedImageTemplate"
-}
-
-variable "image_offer" {
-  description = "The name of image offer"
-  type        = string
-  default     = "windows-ent-cpc"
-}
-
-variable "image_publisher" {
-  description = "The name of image publisher"
-  type        = string
-  default     = "MicrosoftWindowsDesktop"
-}
-
-variable "image_sku" {
-  description = "The name of image sku"
-  type        = string
-  default     = "win11-22h2-ent-cpc-m365"
-}
-
 variable "existing_subnet_id" {
   description = "The subnet resource id if the user wants to use existing subnet"
   type        = string
   default     = ""
-}
-
-variable "enable_packer_build" {
-  description = "Enable automatic Packer image build during Terraform apply"
-  type        = bool
-  default     = true
 }
 
 variable "enable_nat_gateway" {

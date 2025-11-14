@@ -3,7 +3,7 @@
 
 param(
     [string]$Action = "build",
-    [string]$ImageType = "vscode",  # "vscode" or "intellij" or "both"
+    [string]$ImageType = "vscode",  # "vscode", "visualstudio", "intellij", or "all"
     [string]$VarFile = "",
     [switch]$Debug,
     [switch]$Force
@@ -29,9 +29,16 @@ function Get-ImageConfig {
     switch ($ImageType.ToLower()) {
         "vscode" {
             return @{
-                ConfigFile = "windows-devbox.pkr.hcl"
-                VarFile = if ($VarFile) { $VarFile } else { "variables.pkrvars.hcl" }
+                ConfigFile = "vscode-devbox.pkr.hcl"
+                VarFile = if ($VarFile) { $VarFile } else { "vscode-variables.pkrvars.hcl" }
                 Name = "VS Code DevBox"
+            }
+        }
+        "visualstudio" {
+            return @{
+                ConfigFile = "visualstudio-devbox.pkr.hcl"
+                VarFile = if ($VarFile) { $VarFile } else { "visualstudio-variables.pkrvars.hcl" }
+                Name = "Visual Studio DevBox"
             }
         }
         "intellij" {
@@ -42,7 +49,7 @@ function Get-ImageConfig {
             }
         }
         default {
-            throw "Unknown image type: $ImageType. Valid types: vscode, intellij"
+            throw "Unknown image type: $ImageType. Valid types: vscode, visualstudio, intellij"
         }
     }
 }
@@ -161,22 +168,24 @@ Options:
   -Help               Show this help message
 
 Image Types:
-  vscode              VS Code development image (windows-devbox.pkr.hcl)
+  vscode              VS Code development image (vscode-devbox.pkr.hcl)
+  visualstudio        Visual Studio 2022 + VS Code image (visualstudio-devbox.pkr.hcl)
   intellij            IntelliJ IDEA + WSL image (intellij-devbox.pkr.hcl)
-  both                Build both image types sequentially
+  all                 Build all image types sequentially
 
 Examples:
-  .\build-image.ps1                                    # Build VS Code image
-  .\build-image.ps1 -ImageType intellij               # Build IntelliJ image
-  .\build-image.ps1 -ImageType both                    # Build both images
-  .\build-image.ps1 -Action validate -ImageType vscode # Validate VS Code config
-  .\build-image.ps1 -Action all -ImageType intellij    # Init, validate, and build IntelliJ
-  .\build-image.ps1 -Debug -Force -ImageType both      # Debug mode, force rebuild both
+  .\build-image.ps1                                         # Build VS Code image
+  .\build-image.ps1 -ImageType visualstudio                # Build Visual Studio image
+  .\build-image.ps1 -ImageType intellij                    # Build IntelliJ image
+  .\build-image.ps1 -ImageType all                         # Build all images
+  .\build-image.ps1 -Action validate -ImageType vscode     # Validate VS Code config
+  .\build-image.ps1 -Action all -ImageType visualstudio    # Init, validate, and build Visual Studio
+  .\build-image.ps1 -Debug -Force -ImageType all           # Debug mode, force rebuild all
 
 Prerequisites:
   1. Install Packer: https://www.packer.io/downloads
   2. Authenticate with Azure (az login or environment variables)
-  3. Create variables files: variables.pkrvars.hcl and intellij-variables.pkrvars.hcl
+  3. Create variables files: vscode-variables.pkrvars.hcl, visualstudio-variables.pkrvars.hcl, and intellij-variables.pkrvars.hcl
   4. Ensure the Azure Compute Gallery and Image Definitions exist (created by Terraform)
 "@
 }
@@ -231,11 +240,15 @@ try {
     Write-ColorOutput ""
     
     # Process based on image type
-    if ($ImageType.ToLower() -eq "both") {
-        Write-ColorOutput "🔥 Building both image types..." $Green
+    if ($ImageType.ToLower() -eq "all") {
+        Write-ColorOutput "🔥 Building all image types..." $Green
         
         Write-ColorOutput "=== Building VS Code Image ===" $Yellow
         Process-ImageType -Action $Action -ImageType "vscode"
+        
+        Write-ColorOutput ""
+        Write-ColorOutput "=== Building Visual Studio Image ===" $Yellow
+        Process-ImageType -Action $Action -ImageType "visualstudio"
         
         Write-ColorOutput ""
         Write-ColorOutput "=== Building IntelliJ Image ===" $Yellow

@@ -66,8 +66,8 @@ resource "azurerm_shared_image" "main" {
 # Packer builds and publishes actual image versions to these definitions
 #
 # To build images:
-#   cd packer/
-#   .\build-image.ps1 -ImageType windows -Action all
+#   cd packer
+#   .\build-image.ps1 -ImageType visualstudio -Action all
 #   .\build-image.ps1 -ImageType intellij -Action all
 
 output "gallery_name" {

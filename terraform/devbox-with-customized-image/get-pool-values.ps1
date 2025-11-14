@@ -13,9 +13,14 @@ $ErrorActionPreference = "Stop"
 function Write-ColorOutput {
     param(
         [string]$Message,
-        [string]$Color = "White"
+        [string]$Color = "White",
+        [switch]$NoNewline
     )
-    Write-Host $Message -ForegroundColor $Color
+    if ($NoNewline) {
+        Write-Host $Message -ForegroundColor $Color -NoNewline
+    } else {
+        Write-Host $Message -ForegroundColor $Color
+    }
 }
 
 Write-ColorOutput "`n📋 DevCenter Pool Configuration Values" "Cyan"
@@ -294,3 +299,4 @@ Write-Host "  4. Sign in and create your Dev Box`n" -ForegroundColor White
 }
 
 Write-ColorOutput "`n✨ Done!`n" "Green"
+exit 0
