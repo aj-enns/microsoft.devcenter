@@ -3,7 +3,7 @@
 
 param(
     [string]$Action = "build",
-    [string]$ImageType = "visualstudio",  # "visualstudio" or "intellij" or "both"
+    [string]$ImageType = "vscode",  # "vscode" or "intellij" or "both"
     [string]$VarFile = "",
     [switch]$Debug,
     [switch]$Force
@@ -27,11 +27,11 @@ function Get-ImageConfig {
     param([string]$ImageType)
     
     switch ($ImageType.ToLower()) {
-        "visualstudio" {
+        "vscode" {
             return @{
-                ConfigFile = "windows-devbox.pkr.hcl"
-                VarFile = if ($VarFile) { $VarFile } else { "variables.pkrvars.hcl" }
-                Name = "Visual Studio DevBox"
+                ConfigFile = "vscode-devbox.pkr.hcl"
+                VarFile = if ($VarFile) { $VarFile } else { "vscode-variables.pkrvars.hcl" }
+                Name = "VS Code DevBox"
             }
         }
         "intellij" {
@@ -42,7 +42,7 @@ function Get-ImageConfig {
             }
         }
         default {
-            throw "Unknown image type: $ImageType. Valid types: visualstudio, intellij"
+            throw "Unknown image type: $ImageType. Valid types: vscode, intellij"
         }
     }
 }
@@ -161,7 +161,7 @@ Options:
   -Help               Show this help message
 
 Image Types:
-  vscode              VS Code development image (windows-devbox.pkr.hcl)
+  vscode              VS Code development image (vscode-devbox.pkr.hcl)
   intellij            IntelliJ IDEA + WSL image (intellij-devbox.pkr.hcl)
   both                Build both image types sequentially
 
@@ -176,7 +176,7 @@ Examples:
 Prerequisites:
   1. Install Packer: https://www.packer.io/downloads
   2. Authenticate with Azure (az login or environment variables)
-  3. Create variables files: variables.pkrvars.hcl and intellij-variables.pkrvars.hcl
+  3. Create variables files: vscode-variables.pkrvars.hcl and intellij-variables.pkrvars.hcl
   4. Ensure the Azure Compute Gallery and Image Definitions exist (created by Terraform)
 "@
 }
