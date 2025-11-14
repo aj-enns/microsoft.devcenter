@@ -21,17 +21,17 @@
     ],
     "customizedImagePools": [
         {
-            "name": "VS Code Development",
+            "name": "VS-Code-Development",
             "definition": "VSCode-DevBox-8core-32gb",
             "administrator": "Enabled"
         },
         {
-            "name": "Visual Studio 2022 Development",
+            "name": "Visual-Studio-2022-Development",
             "definition": "VisualStudio-DevBox-8core-32gb",
             "administrator": "Enabled"
         },
         {
-            "name": "IntelliJ IDEA Development with WSL",
+            "name": "IntelliJ-IDEA-Development-with-WSL",
             "definition": "IntelliJ-DevBox-8core-32gb",
             "administrator": "Enabled"
         }
