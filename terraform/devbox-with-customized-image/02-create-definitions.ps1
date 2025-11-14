@@ -2,8 +2,11 @@
 # This script:
 # 1. Creates Azure Compute Gallery if it doesn't exist
 # 2. Creates image definitions in the gallery
-# 3. Attaches the gallery to DevCenter
-# 4. Creates DevBox definitions from devcenter-settings.json
+# 3. Grants DevCenter managed identity access to the gallery
+# 4. Attaches the gallery to DevCenter
+# 5. Creates DevBox definitions from devcenter-settings.json
+# 6. Updates project settings
+# 7. Auto-generates Packer variable files with correct values
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  DevBox Definitions Setup Script" -ForegroundColor Cyan
@@ -61,7 +64,7 @@ Write-Host "Step 2: Create Image Definitions" -ForegroundColor Yellow
 $imageDefinitions = @(
     @{
         name = "VisualStudioImage"
-        offer = "windows-ent-cpc"
+        offer = "visualstudio-ent-cpc"
         publisher = "MicrosoftWindowsDesktop"
         sku = "win11-22h2-ent-cpc-m365-vscode"
     },
@@ -109,7 +112,73 @@ foreach ($imgDef in $imageDefinitions) {
 }
 
 Write-Host ""
-Write-Host "Step 3: Attach Gallery to DevCenter" -ForegroundColor Yellow
+Write-Host "Step 3: Grant DevCenter Access to Gallery" -ForegroundColor Yellow
+
+# Get DevCenter identity information
+$identityJson = az devcenter admin devcenter show --name $devCenterName --resource-group $resourceGroup --query "identity" -o json
+$identity = $identityJson | ConvertFrom-Json
+
+if (-not $identity) {
+    Write-Error "DevCenter does not have a managed identity enabled"
+    exit 1
+}
+
+# Get both system-assigned and user-assigned principal IDs
+$systemPrincipalId = $identity.principalId
+$userPrincipalId = ($identity.userAssignedIdentities.PSObject.Properties.Value | Select-Object -First 1).principalId
+
+Write-Host "  System-Assigned Identity: $systemPrincipalId" -ForegroundColor Gray
+Write-Host "  User-Assigned Identity: $userPrincipalId" -ForegroundColor Gray
+
+# Gallery resource ID
+$galleryResourceId = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Compute/galleries/$galleryName"
+
+# Check and grant Reader role to system-assigned identity
+$existingSystemRole = az role assignment list --assignee $systemPrincipalId --scope $galleryResourceId --query "[?roleDefinitionName=='Reader'].id" -o tsv 2>$null
+
+if ($existingSystemRole) {
+    Write-Host "  ✓ System-assigned identity already has Reader access" -ForegroundColor Green
+} else {
+    Write-Host "  Granting Reader role to system-assigned identity..." -ForegroundColor Cyan
+    az role assignment create `
+        --assignee $systemPrincipalId `
+        --role "Reader" `
+        --scope $galleryResourceId | Out-Null
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ Reader role granted to system-assigned identity" -ForegroundColor Green
+    } else {
+        Write-Error "Failed to grant Reader role to system-assigned identity"
+        exit 1
+    }
+}
+
+# Check and grant Reader role to user-assigned identity
+$existingUserRole = az role assignment list --assignee $userPrincipalId --scope $galleryResourceId --query "[?roleDefinitionName=='Reader'].id" -o tsv 2>$null
+
+if ($existingUserRole) {
+    Write-Host "  ✓ User-assigned identity already has Reader access" -ForegroundColor Green
+} else {
+    Write-Host "  Granting Reader role to user-assigned identity..." -ForegroundColor Cyan
+    az role assignment create `
+        --assignee $userPrincipalId `
+        --role "Reader" `
+        --scope $galleryResourceId | Out-Null
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ Reader role granted to user-assigned identity" -ForegroundColor Green
+    } else {
+        Write-Error "Failed to grant Reader role to user-assigned identity"
+        exit 1
+    }
+}
+
+# Wait for role assignments to propagate
+Write-Host "  ⏳ Waiting for role assignments to propagate (60 seconds)..." -ForegroundColor Cyan
+Start-Sleep -Seconds 60
+
+Write-Host ""
+Write-Host "Step 4: Attach Gallery to DevCenter" -ForegroundColor Yellow
 
 # Check if gallery is already attached
 $attachedGalleries = az devcenter admin gallery list --dev-center $devCenterName --resource-group $resourceGroup --query "[?contains(galleryResourceId, '$galleryName')].name" -o tsv 2>$null
@@ -117,7 +186,6 @@ if ($attachedGalleries -and $attachedGalleries.Contains($galleryName)) {
     Write-Host "  ✓ Gallery already attached to DevCenter" -ForegroundColor Green
 } else {
     Write-Host "  Attaching gallery to DevCenter..." -ForegroundColor Cyan
-    $galleryResourceId = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Compute/galleries/$galleryName"
     
     az devcenter admin gallery create `
         --dev-center-name $devCenterName `
@@ -143,7 +211,7 @@ $imageMap.GetEnumerator() | ForEach-Object {
 
 # Read devcenter-settings.json
 Write-Host ""
-Write-Host "Step 4: Create DevBox Definitions" -ForegroundColor Yellow
+Write-Host "Step 5: Create DevBox Definitions" -ForegroundColor Yellow
 Write-Host "  Reading DevCenter settings..." -ForegroundColor Cyan
 $settingsFile = "devcenter-settings.json"
 if (-not (Test-Path $settingsFile)) {
@@ -222,7 +290,7 @@ Write-Host "✓ DevBox definitions creation complete" -ForegroundColor Green
 
 # Update project to allow dev box creation
 Write-Host ""
-Write-Host "Step 5: Update Project Settings" -ForegroundColor Yellow
+Write-Host "Step 6: Update Project Settings" -ForegroundColor Yellow
 
 $projectName = ($state.resources | Where-Object { $_.type -eq "azurerm_dev_center_project" } | Select-Object -First 1).instances[0].attributes.name
 
@@ -252,11 +320,85 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host ""
+Write-Host "Step 7: Update Packer Variables Files" -ForegroundColor Yellow
+
+$packerDir = Join-Path $PSScriptRoot "packer"
+if (Test-Path $packerDir) {
+    Write-Host "  Updating Packer variable files with Terraform values..." -ForegroundColor Cyan
+    
+    # Get Azure account info
+    $tenantId = az account show --query tenantId -o tsv
+    
+    # Visual Studio image variables
+    $vsVarsFile = Join-Path $packerDir "variables.pkrvars.hcl"
+    $vsVarsContent = @"
+# Packer variables file for Visual Studio DevBox
+# Auto-generated by 02-create-definitions.ps1
+
+# Azure authentication
+subscription_id = "$subscriptionId"
+tenant_id      = "$tenantId"
+
+# Azure resources
+resource_group_name    = "$resourceGroup"
+gallery_name          = "$galleryName"
+image_definition_name = "VisualStudioImage"
+location             = "$location"
+
+# Image configuration
+image_version = "1.0.0"  # Increment this for new versions
+vm_size      = "Standard_D2s_v3"
+
+# Base image (Windows 11 Enterprise with Microsoft 365)
+image_publisher = "MicrosoftWindowsDesktop"
+image_offer    = "visualstudio-ent-cpc"
+image_sku      = "win11-22h2-ent-cpc-m365-vscode"
+"@
+    
+    Set-Content -Path $vsVarsFile -Value $vsVarsContent
+    Write-Host "  ✓ Updated variables.pkrvars.hcl" -ForegroundColor Green
+    
+    # IntelliJ image variables
+    $intellijVarsFile = Join-Path $packerDir "intellij-variables.pkrvars.hcl"
+    $intellijVarsContent = @"
+# Packer variables file for IntelliJ DevBox
+# Auto-generated by 02-create-definitions.ps1
+
+# Azure authentication
+subscription_id = "$subscriptionId"
+tenant_id      = "$tenantId"
+
+# Azure resources
+resource_group_name    = "$resourceGroup"
+gallery_name          = "$galleryName"
+image_definition_name = "IntelliJDevImage"
+location             = "$location"
+
+# Image configuration
+image_version = "1.0.0"  # Increment this for new versions
+vm_size      = "Standard_D2s_v3"
+
+# Base image (Windows 11 Enterprise with Microsoft 365)
+image_publisher = "MicrosoftWindowsDesktop"
+image_offer    = "windows-ent-cpc"
+image_sku      = "win11-22h2-ent-cpc-m365"
+"@
+    
+    Set-Content -Path $intellijVarsFile -Value $intellijVarsContent
+    Write-Host "  ✓ Updated intellij-variables.pkrvars.hcl" -ForegroundColor Green
+} else {
+    Write-Host "  ⚠️  Packer directory not found, skipping variable file updates" -ForegroundColor Yellow
+}
+
+Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
 Write-Host "  ✓ Setup Complete!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. (Optional) Build custom images with Packer if using custom imageTypes" -ForegroundColor Gray
+Write-Host "  1. (Optional) Build custom images with Packer:" -ForegroundColor Gray
+Write-Host "     cd packer" -ForegroundColor Gray
+Write-Host "     .\build-image.ps1 -ImageType visualstudio -Action all" -ForegroundColor Gray
+Write-Host "     .\build-image.ps1 -ImageType intellij -Action all" -ForegroundColor Gray
 Write-Host "  2. Run 03-create-pools.ps1 to create the Dev Box pools" -ForegroundColor Gray
 Write-Host ""

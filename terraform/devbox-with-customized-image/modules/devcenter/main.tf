@@ -72,7 +72,7 @@ resource "azurerm_dev_center" "main" {
   location            = var.location
 
   identity {
-    type = "UserAssigned"
+    type = "SystemAssigned, UserAssigned"
     identity_ids = [
       var.managed_identity_id
     ]

@@ -3,7 +3,7 @@
 
 param(
     [string]$Action = "build",
-    [string]$ImageType = "vscode",  # "vscode" or "intellij" or "both"
+    [string]$ImageType = "visualstudio",  # "visualstudio" or "intellij" or "both"
     [string]$VarFile = "",
     [switch]$Debug,
     [switch]$Force
@@ -27,11 +27,11 @@ function Get-ImageConfig {
     param([string]$ImageType)
     
     switch ($ImageType.ToLower()) {
-        "vscode" {
+        "visualstudio" {
             return @{
                 ConfigFile = "windows-devbox.pkr.hcl"
                 VarFile = if ($VarFile) { $VarFile } else { "variables.pkrvars.hcl" }
-                Name = "VS Code DevBox"
+                Name = "Visual Studio DevBox"
             }
         }
         "intellij" {
@@ -42,7 +42,7 @@ function Get-ImageConfig {
             }
         }
         default {
-            throw "Unknown image type: $ImageType. Valid types: vscode, intellij"
+            throw "Unknown image type: $ImageType. Valid types: visualstudio, intellij"
         }
     }
 }

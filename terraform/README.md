@@ -125,7 +125,7 @@ terraform apply -var-file="terraform.tfvars"
 cd packer
 cp variables.pkrvars.hcl.example variables.pkrvars.hcl
 # Edit variables file
-.\build-image.ps1 -ImageType windows -Action all
+.\build-image.ps1 -ImageType visualstudio -Action all
 .\build-image.ps1 -ImageType intellij -Action all
 ```
 
@@ -189,7 +189,7 @@ provisioner "powershell" {
 After editing, rebuild the image:
 ```bash
 cd packer
-.\build-image.ps1 -ImageType windows -Action all
+.\build-image.ps1 -ImageType visualstudio -Action all
 ```
 
 ---

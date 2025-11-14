@@ -119,7 +119,7 @@ When deploying for the first time:
 2. **Build Images**: Create custom images with Packer (30-60 min)
    ```bash
    cd packer
-   .\build-image.ps1 -ImageType windows -Action all
+   .\build-image.ps1 -ImageType visualstudio -Action all
    .\build-image.ps1 -ImageType intellij -Action all
    ```
 
