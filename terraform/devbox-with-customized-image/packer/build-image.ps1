@@ -240,7 +240,7 @@ try {
     Write-ColorOutput ""
     
     # Process based on image type
-    if ($ImageType.ToLower() -eq "all" -or $ImageType.ToLower() -eq "both") {
+    if ($ImageType.ToLower() -eq "all") {
         Write-ColorOutput "🔥 Building all image types..." $Green
         
         Write-ColorOutput "=== Building VS Code Image ===" $Yellow
