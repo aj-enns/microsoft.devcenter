@@ -18,9 +18,10 @@ This folder contains HashiCorp Terraform examples for deploying Azure Dev Box in
 - PowerShell scripts for definitions and pool creation
 - Optional Intune integration configuration
 
-**Two custom images:**
+**Three custom images:**
 1. **VS Code Developer Image** - Windows 11 with VS Code, Git, Azure CLI, Node.js, Python, .NET SDK
-2. **IntelliJ Developer Image** - Windows 11 with IntelliJ IDEA Community, WSL2, Java, Maven, Gradle
+2. **Visual Studio 2022 Developer Image** - Windows 11 with Visual Studio 2022, Git, Azure CLI, .NET SDK, Docker
+3. **IntelliJ Developer Image** - Windows 11 with IntelliJ IDEA Community, WSL2, Java, Maven, Gradle
 
 **Highlights:**
 - ✅ Infrastructure as Code with Terraform
@@ -33,9 +34,10 @@ This folder contains HashiCorp Terraform examples for deploying Azure Dev Box in
 **Deployment workflow:**
 1. `terraform apply` - Creates infrastructure
 2. `packer build` - Builds custom images (30-60 min each)
-3. `02-create-definitions.ps1` - Creates DevBox definitions
+3. `02-create-definitions.ps1` - Creates DevBox definitions (initially bound to built-in images)
 4. `03-create-pools.ps1` - Creates DevBox pools
-5. `04-configure-intune.ps1` - (Optional) Configures Intune enrollment
+5. `04-bind-custom-images.ps1` - Binds Dev Box definitions to Packer-built gallery images
+6. `04-configure-intune.ps1` - (Optional) Configures Intune enrollment
 
 [→ View Full Documentation](./devbox-with-customized-image/)
 
@@ -141,11 +143,12 @@ cp variables.pkrvars.hcl.example variables.pkrvars.hcl
 cd ..
 .\02-create-definitions.ps1
 .\03-create-pools.ps1
+.\u003c04-bind-custom-images.ps1
 ```
 
 ### 7. (Optional) Configure Intune
 ```bash
-.\04-configure-intune.ps1
+.\u003c04-configure-intune.ps1
 ```
 
 ### 8. Destroy Resources
