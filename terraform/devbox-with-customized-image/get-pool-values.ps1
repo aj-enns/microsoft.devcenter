@@ -267,12 +267,36 @@ az devcenter admin pool create ``
     --local-administrator "$($pool.administrator)"
 
 if (`$LASTEXITCODE -eq 0) {
-    Write-Host "✅ Pool '$($pool.name)' created successfully`n" -ForegroundColor Green
+    Write-Host "✅ Pool '$($pool.name)' created successfully" -ForegroundColor Green
 } else {
-    Write-Host "❌ Failed to create pool '$($pool.name)'`n" -ForegroundColor Red
+    Write-Host "❌ Failed to create pool '$($pool.name)'" -ForegroundColor Red
 }
 
 "@
+        
+        # Add schedule creation if defined
+        if ($pool.schedule) {
+            $scriptContent += @"
+# Create schedule for pool: $($pool.name)
+Write-Host "⏰ Creating shutdown schedule for pool: $($pool.name)..." -ForegroundColor Yellow
+az devcenter admin schedule create ``
+    --pool-name "$($pool.name)" ``
+    --project-name "$projectName" ``
+    --resource-group "$resourceGroup" ``
+    --time "$($pool.schedule.time)" ``
+    --time-zone "$($pool.schedule.timeZone)" ``
+    --state Enabled
+
+if (`$LASTEXITCODE -eq 0) {
+    Write-Host "✅ Schedule created: Shutdown at $($pool.schedule.time) $($pool.schedule.timeZone)`n" -ForegroundColor Green
+} else {
+    Write-Host "❌ Failed to create schedule for pool '$($pool.name)'`n" -ForegroundColor Red
+}
+
+"@
+        } else {
+            $scriptContent += "`n"
+        }
     }
     
     $scriptContent += @"

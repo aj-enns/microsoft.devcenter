@@ -23,17 +23,29 @@
         {
             "name": "VS-Code-Development",
             "definition": "VSCode-DevBox-8core-32gb",
-            "administrator": "Enabled"
+            "administrator": "Enabled",
+            "schedule": {
+                "time": "17:00",
+                "timeZone": "Central Standard Time"
+            }
         },
         {
             "name": "Visual-Studio-2022-Development",
             "definition": "VisualStudio-DevBox-8core-32gb",
-            "administrator": "Enabled"
+            "administrator": "Enabled",
+            "schedule": {
+                "time": "17:00",
+                "timeZone": "Central Standard Time"
+            }
         },
         {
             "name": "IntelliJ-IDEA-Development-with-WSL",
             "definition": "IntelliJ-DevBox-8core-32gb",
-            "administrator": "Enabled"
+            "administrator": "Enabled",
+            "schedule": {
+                "time": "17:00",
+                "timeZone": "Central Standard Time"
+            }
         }
     ]
 }
