@@ -18,10 +18,10 @@
     Skip checking Dev Center configuration
     
 .EXAMPLE
-    .\04-configure-intune.ps1
+    .\05-configure-intune.ps1
     
 .EXAMPLE
-    .\04-configure-intune.ps1 -SkipAADCheck
+    .\05-configure-intune.ps1 -SkipAADCheck
 #>
 
 [CmdletBinding()]

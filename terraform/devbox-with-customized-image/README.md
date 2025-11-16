@@ -50,7 +50,7 @@ cd ..
 .\03-create-pools.ps1
 
 # Step 7 (OPTIONAL): Configure Intune enrollment
-.\04-configure-intune.ps1
+.\05-configure-intune.ps1
 ```
 
 ## Overview
@@ -322,10 +322,10 @@ This step is **completely optional**! Run this only if you want Dev Boxes to aut
 
 ```powershell
 # Run the configuration checker
-.\04-configure-intune.ps1
+.\05-configure-intune.ps1
 
 # Or skip certain checks
-.\04-configure-intune.ps1 -SkipAADCheck
+.\05-configure-intune.ps1 -SkipAADCheck
 ```
 
 This script:

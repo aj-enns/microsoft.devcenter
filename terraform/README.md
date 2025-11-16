@@ -37,7 +37,7 @@ This folder contains HashiCorp Terraform examples for deploying Azure Dev Box in
 3. `02-create-definitions.ps1` - Creates DevBox definitions (initially bound to built-in images)
 4. `03-create-pools.ps1` - Creates DevBox pools
 5. `04-bind-custom-images.ps1` - Binds Dev Box definitions to Packer-built gallery images
-6. `04-configure-intune.ps1` - (Optional) Configures Intune enrollment
+6. `05-configure-intune.ps1` - (Optional) Configures Intune enrollment
 
 [→ View Full Documentation](./devbox-with-customized-image/)
 
@@ -148,7 +148,7 @@ cd ..
 
 ### 7. (Optional) Configure Intune
 ```bash
-.\u003c04-configure-intune.ps1
+.\05-configure-intune.ps1
 ```
 
 ### 8. Destroy Resources
