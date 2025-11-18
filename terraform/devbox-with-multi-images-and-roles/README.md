@@ -269,6 +269,9 @@ cp security-baseline.pkrvars.hcl.example security-baseline.pkrvars.hcl
 # - gallery_name
 # - location
 
+# Create the image definition in the gallery (first time only)
+.\create-image-definition.ps1
+
 # Build the golden baseline image (version 1.0.0)
 .\build-baseline-image.ps1 -ImageVersion "1.0.0"
 
