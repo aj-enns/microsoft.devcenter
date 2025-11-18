@@ -328,11 +328,16 @@ try {
     }
     
     # Step 4: Build image
-    if (-not (Build-BaselineImage)) {
-        throw "Image build failed"
+    $buildSuccess = Build-BaselineImage
+    
+    if (-not $buildSuccess) {
+        Write-Host ""
+        Write-Error "Image build failed. Please check the Packer output above for details."
+        Write-Host ""
+        exit 1
     }
     
-    # Step 5: Show results
+    # Step 5: Show results (only if build succeeded)
     Show-BuildResults
     
     Write-Header "Build Process Complete"

@@ -153,6 +153,10 @@ build {
     inline = [
       "Write-Host '=== Configuring Azure AD Join Readiness ==='",
       "",
+      "# Set network profile to Private (required for WinRM configuration)",
+      "Write-Host 'Setting network profile to Private...'",
+      "Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private -ErrorAction SilentlyContinue",
+      "",
       "# Enable User Account Control (UAC)",
       "Write-Host 'Enabling UAC...'",
       "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System' -Name 'EnableLUA' -Value 1 -Force",
