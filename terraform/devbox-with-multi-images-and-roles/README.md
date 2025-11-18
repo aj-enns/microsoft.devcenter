@@ -269,8 +269,14 @@ cp security-baseline.pkrvars.hcl.example security-baseline.pkrvars.hcl
 # - gallery_name
 # - location
 
-# Build the golden baseline image
-.\build-baseline-image.ps1 -Action all
+# Build the golden baseline image (version 1.0.0)
+.\build-baseline-image.ps1 -ImageVersion "1.0.0"
+
+# Or validate without building
+.\build-baseline-image.ps1 -ImageVersion "1.0.0" -ValidateOnly
+
+# For CI/CD (skip confirmations)
+.\build-baseline-image.ps1 -ImageVersion "1.0.0" -Force
 ```
 
 This creates the `SecurityBaselineImage` with:

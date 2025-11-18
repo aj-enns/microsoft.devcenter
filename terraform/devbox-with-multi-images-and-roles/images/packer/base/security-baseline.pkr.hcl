@@ -60,12 +60,6 @@ variable "vm_size" {
   default     = "Standard_D2s_v3"
 }
 
-variable "build_resource_group_name" {
-  type        = string
-  description = "Temporary resource group for Packer build resources (will be auto-created and deleted)"
-  default     = "rg-packer-baseline-build"
-}
-
 # =============================================================================
 # SOURCE CONFIGURATION
 # =============================================================================
@@ -80,9 +74,10 @@ source "azure-arm" "security_baseline" {
   managed_image_resource_group_name = var.resource_group_name
   managed_image_name                = "SecurityBaselineImage-${var.image_version}"
   
-  build_resource_group_name = var.build_resource_group_name
-  location                  = var.location
-  vm_size                   = var.vm_size
+  # Packer will create a temporary resource group for the build
+  # and automatically delete it when done
+  location = var.location
+  vm_size  = var.vm_size
 
   # Source Image - Microsoft Windows 11 Enterprise with M365
   os_type         = "Windows"

@@ -24,7 +24,3 @@ location = "eastus"
 # Standard_D2s_v3 is sufficient for most builds
 # Increase for faster builds: Standard_D4s_v3, Standard_D8s_v3
 vm_size = "Standard_D2s_v3"
-
-# Temporary resource group for Packer build
-# This will be auto-created and deleted during the build
-build_resource_group_name = "rg-packer-baseline-build"
