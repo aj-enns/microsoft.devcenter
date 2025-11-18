@@ -79,6 +79,7 @@ $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PACKER_TEMPLATE = Join-Path $SCRIPT_DIR "security-baseline.pkr.hcl"
 $VAR_FILE_PATH = Join-Path $SCRIPT_DIR $VarFile
 $MANIFEST_FILE = Join-Path $SCRIPT_DIR "manifest-security-baseline.json"
+$LOG_FILE = Join-Path $SCRIPT_DIR "build-baseline-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 
 # =============================================================================
 # FUNCTIONS
@@ -237,16 +238,17 @@ function Build-BaselineImage {
     
     Write-Host ""
     Write-Host "Starting Packer build at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    Write-Info "Build log: $LOG_FILE"
     Write-Host ""
     
     $startTime = Get-Date
     
-    # Run Packer build
-    packer build `
+    # Run Packer build and capture output to log file
+    $packerOutput = packer build `
         -var-file="$VAR_FILE_PATH" `
         -var "image_version=$ImageVersion" `
         -force `
-        $PACKER_TEMPLATE
+        $PACKER_TEMPLATE 2>&1 | Tee-Object -FilePath $LOG_FILE
     
     $buildExitCode = $LASTEXITCODE
     $endTime = Get-Date
@@ -259,9 +261,14 @@ function Build-BaselineImage {
     
     if ($buildExitCode -eq 0) {
         Write-Success "Build completed successfully!"
+        Write-Info "Full build log saved to: $LOG_FILE"
         return $true
     } else {
         Write-Error "Build failed with exit code $buildExitCode"
+        Write-Error "Check the log file for details: $LOG_FILE"
+        Write-Host ""
+        Write-Host "Last 50 lines of build output:" -ForegroundColor Yellow
+        Get-Content $LOG_FILE -Tail 50
         return $false
     }
 }
