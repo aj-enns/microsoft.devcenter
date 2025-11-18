@@ -256,7 +256,32 @@ Provides checklist for:
 - License requirements
 - Intune policy configuration
 
-#### Step 4: Grant Development Team Access
+#### Step 4: Build Security Baseline Image
+
+```powershell
+cd ..\images\packer\base
+
+# Create and configure security-baseline.pkrvars.hcl
+cp security-baseline.pkrvars.hcl.example security-baseline.pkrvars.hcl
+# Edit with values from terraform output:
+# - subscription_id
+# - resource_group_name
+# - gallery_name
+# - location
+
+# Build the golden baseline image
+.\build-baseline-image.ps1 -Action all
+```
+
+This creates the `SecurityBaselineImage` with:
+- Windows hardening and security policies
+- Compliance configurations
+- Base tooling (Git, VS Code, etc.)
+- Organization-wide settings
+
+**Note:** Development teams will reference this baseline image when building their team-specific images.
+
+#### Step 5: Grant Development Team Access
 
 ```bash
 # Get gallery resource ID
@@ -269,7 +294,7 @@ az role assignment create \
   --scope $GALLERY_ID
 ```
 
-#### Step 5: Ongoing - Sync Pools
+#### Step 6: Ongoing - Sync Pools
 
 When development teams add new definitions:
 
