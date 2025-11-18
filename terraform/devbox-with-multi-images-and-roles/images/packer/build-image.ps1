@@ -82,7 +82,7 @@ Write-Host ""
 
 # Validate Packer template
 Write-Host "Step 3: Validating Packer template..." -ForegroundColor Yellow
-packer validate -var-file=$varsFile $packerFile
+packer validate -var-file="$varsFile" $packerFile
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ❌ Packer validation failed" -ForegroundColor Red
     exit 1
@@ -103,7 +103,7 @@ Write-Host "  This may take 30-60 minutes depending on image size and complexity
 Write-Host ""
 
 $buildStart = Get-Date
-packer build -var-file=$varsFile $packerFile
+packer build -var-file="$varsFile" $packerFile
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""

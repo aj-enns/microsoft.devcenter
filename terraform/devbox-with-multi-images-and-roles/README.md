@@ -33,14 +33,14 @@ devbox-with-multi-images-and-roles/
 
 ## 📋 Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Repository Structure](#repository-structure)
-- [Operations Team Guide](#operations-team-guide)
-- [Development Team Guide](#development-team-guide)
-- [Separation of Duties](#separation-of-duties)
-- [CI/CD Integration](#cicd-integration)
-- [Troubleshooting](#troubleshooting)
+- [✅ Prerequisites](#-prerequisites)
+- [🚀 Quick Start](#-quick-start)
+- [📁 Repository Structure](#-repository-structure)
+- [👔 Operations Team Guide](#-operations-team-guide)
+- [👨‍💻 Development Team Guide](#-development-team-guide)
+- [🔒 Separation of Duties](#-separation-of-duties)
+- [🔄 CI/CD Integration](#-cicd-integration)
+- [🐛 Troubleshooting](#-troubleshooting)
 
 ## ✅ Prerequisites
 
@@ -287,15 +287,14 @@ The infrastructure deployment provides outputs for the image team:
 ```bash
 terraform output
 
-# Key outputs:
+# Key outputs for Development Teams:
 # - resource_group_name: Where gallery lives
 # - gallery_name: Name of compute gallery
-# - subscription_id: Azure subscription
-# - tenant_id: Azure AD tenant
+# - subscription_id: Azure subscription (for Packer)
 # - location: Azure region
 ```
 
-Development teams need these values for their Packer builds.
+Development teams need these values for their Packer variable files. Note: `tenant_id` is not needed as Packer uses Azure CLI authentication (`az login`).
 
 ### Network Planning
 
@@ -365,14 +364,32 @@ cp teams/vscode-variables.pkrvars.hcl.example teams/vscode-variables.pkrvars.hcl
 Edit with values from Operations Team's Terraform outputs:
 
 ```hcl
-subscription_id = "..."
-tenant_id      = "..."
+# Azure subscription where resources will be created
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Resource group containing the Azure Compute Gallery
 resource_group_name = "rg-devbox-multi-roles"
-gallery_name   = "galdevbox"
-image_definition_name = "VSCodeDevImage"
-location = "eastus"
+
+# Name of the Azure Compute Gallery
+gallery_name = "galdevbox"
+
+# Version of SecurityBaselineImage to build from
+baseline_image_version = "1.0.0"
+
+# Version for this VS Code team image
 image_version = "1.0.0"  # Increment for new versions
+
+# Azure region for temporary build resources
+location = "eastus"
+
+# VM size for the build process
+vm_size = "Standard_D2s_v3"
+
+# Temporary resource group for Packer build (auto-created and deleted)
+build_resource_group_name = "rg-packer-vscode-build"
 ```
+
+**Note:** The image name (`VSCodeDevImage`) is predefined in the Packer template - you don't need to specify it.
 
 #### Step 2: Customize Packer Template
 
