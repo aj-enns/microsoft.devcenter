@@ -37,7 +37,7 @@ devbox-with-multi-images-and-roles/
 - [🚀 Quick Start](#-quick-start)
 - [📁 Repository Structure](#-repository-structure)
 - [👔 Operations Team Guide](#-operations-team-guide)
-- [👨‍💻 Development Team Guide](#-development-team-guide)
+- [💻 Development Team Guide](#-development-team-guide)
 - [🔒 Separation of Duties](#-separation-of-duties)
 - [🔄 CI/CD Integration](#-cicd-integration)
 - [🐛 Troubleshooting](#-troubleshooting)
@@ -342,7 +342,7 @@ az devcenter admin pool show \
   --resource-group <rg>
 ```
 
-## 👨‍💻 Development Team Guide
+## 💻 Development Team Guide
 
 ### Responsibilities
 
