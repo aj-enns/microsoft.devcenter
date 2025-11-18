@@ -21,11 +21,20 @@ Write-Host ""
 
 # Read Terraform outputs
 Write-Host "Reading Terraform state..." -ForegroundColor Yellow
-$outputs = terraform output -json | ConvertFrom-Json
 
-$devCenterName = $outputs.dev_center_name.value
-$resourceGroup = $outputs.resource_group_name.value
-$networkConnectionName = $outputs.network_connection_name.value
+# Change to infrastructure directory to read Terraform state
+$originalDir = Get-Location
+Set-Location (Join-Path $PSScriptRoot "..")
+
+try {
+    $outputs = terraform output -json | ConvertFrom-Json
+    
+    $devCenterName = $outputs.dev_center_name.value
+    $resourceGroup = $outputs.resource_group_name.value
+    $networkConnectionName = $outputs.network_connection_name.value
+} finally {
+    Set-Location $originalDir
+}
 
 Write-Host "  DevCenter: $devCenterName" -ForegroundColor Gray
 Write-Host "  Resource Group: $resourceGroup" -ForegroundColor Gray

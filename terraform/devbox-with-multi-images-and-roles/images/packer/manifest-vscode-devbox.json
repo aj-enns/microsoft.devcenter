@@ -1,0 +1,22 @@
+{
+  "builds": [
+    {
+      "name": "vscode_customization",
+      "builder_type": "azure-arm",
+      "build_time": 1763489904,
+      "files": null,
+      "artifact_id": "/subscriptions/1b2c6be0-ed07-4512-b69c-8c080c09c608/resourceGroups/rg-devbox-multi-roles/providers/Microsoft.Compute/galleries/galxvqypooxvqja4/images/VSCodeDevImage/versions/1.0.0",
+      "packer_run_uuid": "a81201a7-7941-a048-fabd-cd0b6c198658",
+      "custom_data": {
+        "baseline_image": "SecurityBaselineImage",
+        "baseline_version": "1.0.0",
+        "build_time": "2025-11-18T18:18:24Z",
+        "description": "VS Code development image with Node.js, Python, .NET, Docker, and Terraform",
+        "image_name": "VSCodeDevImage",
+        "image_version": "1.0.0",
+        "team_name": "VS Code Team"
+      }
+    }
+  ],
+  "last_run_uuid": "a81201a7-7941-a048-fabd-cd0b6c198658"
+}

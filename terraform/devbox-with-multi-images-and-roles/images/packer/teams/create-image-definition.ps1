@@ -114,7 +114,7 @@ try {
         --os-type Windows `
         --os-state Generalized `
         --hyper-v-generation V2 `
-        --features SecurityType=TrustedLaunchSupported `
+        --features SecurityType=TrustedLaunch `
         --description $config.Description
 
     if ($LASTEXITCODE -ne 0) {

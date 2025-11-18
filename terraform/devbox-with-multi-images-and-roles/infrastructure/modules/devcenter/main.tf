@@ -99,12 +99,29 @@ resource "null_resource" "attached_network_placeholder" {
   }
 }
 
+# Grant DevCenter user-assigned identity access to Compute Gallery
+resource "azurerm_role_assignment" "gallery" {
+  scope                = var.gallery_id
+  role_definition_name = "Contributor"
+  principal_id         = var.managed_identity_principal_id
+}
+
+# Attach Compute Gallery to DevCenter
+resource "azurerm_dev_center_gallery" "main" {
+  name              = "CustomImages"
+  dev_center_id     = azurerm_dev_center.main.id
+  shared_gallery_id = var.gallery_id
+
+  depends_on = [azurerm_role_assignment.gallery]
+}
+
 # Project
 resource "azurerm_dev_center_project" "main" {
-  name               = var.project_name
-  resource_group_name = var.resource_group_name
-  location           = var.location
-  dev_center_id      = azurerm_dev_center.main.id
+  name                     = var.project_name
+  resource_group_name      = var.resource_group_name
+  location                 = var.location
+  dev_center_id            = azurerm_dev_center.main.id
+  maximum_dev_boxes_per_user = 10
 }
 
 # DevBox Role Assignment

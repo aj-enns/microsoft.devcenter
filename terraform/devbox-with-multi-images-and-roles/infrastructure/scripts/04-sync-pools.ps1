@@ -37,13 +37,22 @@ Write-Host ""
 
 # Read Terraform outputs
 Write-Host "Step 1: Reading infrastructure configuration..." -ForegroundColor Yellow
-$outputs = terraform output -json | ConvertFrom-Json
 
-$devCenterName = $outputs.dev_center_name.value
-$projectName = $outputs.project_name.value
-$resourceGroup = $outputs.resource_group_name.value
-$location = $outputs.location.value
-$subscriptionId = $outputs.subscription_id.value
+# Change to infrastructure directory to read Terraform state
+$originalDir = Get-Location
+Set-Location (Join-Path $PSScriptRoot "..")
+
+try {
+    $outputs = terraform output -json | ConvertFrom-Json
+    
+    $devCenterName = $outputs.dev_center_name.value
+    $projectName = $outputs.project_name.value
+    $resourceGroup = $outputs.resource_group_name.value
+    $location = $outputs.location.value
+    $subscriptionId = $outputs.subscription_id.value
+} finally {
+    Set-Location $originalDir
+}
 
 Write-Host "  ✓ DevCenter: $devCenterName" -ForegroundColor Green
 Write-Host "  ✓ Project: $projectName" -ForegroundColor Green
@@ -121,7 +130,7 @@ foreach ($pool in $definitions.pools) {
     
     # Add stop schedule if configured
     if ($pool.schedule) {
-        $createCmd += " --stop-on-disconnect state=`"Enabled`" grace-period-minutes=60"
+        $createCmd += " --stop-on-disconnect status=`"Enabled`" grace-period-minutes=60"
     }
     
     Write-Host "    Command: $createCmd" -ForegroundColor DarkGray

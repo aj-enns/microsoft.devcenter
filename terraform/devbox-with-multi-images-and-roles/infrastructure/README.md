@@ -164,7 +164,28 @@ cd ..\images\packer\teams
 
 **Note:** This is a one-time setup. Development teams can also run this themselves when they're ready to build their first image.
 
-### Step 8: Sync Pools (Ongoing)
+### Step 8: Verify Gallery Sync (After Team Images Are Built)
+
+After development teams build custom images, verify they've synced to DevCenter:
+
+```powershell
+cd infrastructure\scripts
+.\00-verify-gallery-sync.ps1
+```
+
+**Important:** Custom images take **5-30 minutes** to sync from Compute Gallery to DevCenter. Run this script periodically until images appear. Only proceed to Step 9 when images are synced.
+
+### Step 9: Create DevBox Definitions
+
+Once images are synced to DevCenter, create DevBox definitions:
+
+```powershell
+.\03-create-definitions.ps1
+```
+
+This script links the gallery images to compute/storage configurations in DevCenter.
+
+### Step 10: Sync Pools (Ongoing)
 
 When development teams update definitions:
 
@@ -702,11 +723,71 @@ az role assignment list \
 ```
 
 **Solution:**
-Grant managed identity the required role on gallery.
+The DevCenter's **user-assigned** managed identity needs **Contributor** role on the Compute Gallery. Terraform now handles this automatically, but if you encounter issues:
+
+```powershell
+# Get the user-assigned identity principal ID
+$identity = az devcenter admin devcenter show \
+  --name <devcenter> \
+  --resource-group <rg> \
+  --query "identity.userAssignedIdentities" -o json | ConvertFrom-Json
+
+$principalId = ($identity.PSObject.Properties.Value)[0].principalId
+
+# Grant Contributor role
+az role assignment create \
+  --assignee $principalId \
+  --role "Contributor" \
+  --scope <gallery-resource-id>
+
+# Wait 1-2 minutes for propagation, then attach gallery
+az devcenter admin gallery create \
+  --dev-center-name <devcenter> \
+  --resource-group <rg> \
+  --gallery-name CustomImages \
+  --gallery-resource-id <compute-gallery-id>
+```
+
+**Problem: Custom images not appearing in DevCenter after gallery attachment**
+
+Custom images can take **5-30 minutes** (up to 2 hours) to sync from the Compute Gallery to DevCenter.
+
+```powershell
+# Run the verification script
+cd infrastructure/scripts
+./00-verify-gallery-sync.ps1
+
+# Check images in Compute Gallery
+az sig image-definition list \
+  --gallery-name <gallery> \
+  --resource-group <rg>
+
+# Check images synced to DevCenter  
+az devcenter admin image list \
+  --dev-center <devcenter> \
+  --resource-group <rg> \
+  --query "[?contains(name, 'SecurityBaseline') || contains(name, 'VSCode')]"
+```
+
+**Solution:** Wait for sync to complete. The `00-verify-gallery-sync.ps1` script will tell you when images are ready.
 
 ### User Access Issues
 
-**Problem: Users can't provision Dev Boxes**
+**Problem: "Your project administrator has set a limit of 0 dev boxes per user"**
+
+The project needs to have `maximum_dev_boxes_per_user` configured. This is now set to 10 by default in Terraform.
+
+If you need to change it:
+1. Update `infrastructure/modules/devcenter/main.tf`:
+   ```terraform
+   resource "azurerm_dev_center_project" "main" {
+     # ... other settings ...
+     maximum_dev_boxes_per_user = 10  # Adjust as needed
+   }
+   ```
+2. Run `terraform apply`
+
+**Problem: Users can't provision Dev Boxes (permission denied)**
 
 ```powershell
 # Verify role assignment

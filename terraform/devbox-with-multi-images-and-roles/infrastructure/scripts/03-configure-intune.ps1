@@ -21,11 +21,20 @@ Write-Host ""
 
 # Read Terraform outputs
 Write-Host "Reading infrastructure configuration..." -ForegroundColor Yellow
-$outputs = terraform output -json | ConvertFrom-Json
 
-$devCenterName = $outputs.dev_center_name.value
-$resourceGroup = $outputs.resource_group_name.value
-$networkConnectionName = $outputs.network_connection_name.value
+# Change to infrastructure directory to read Terraform state
+$originalDir = Get-Location
+Set-Location (Join-Path $PSScriptRoot "..")
+
+try {
+    $outputs = terraform output -json | ConvertFrom-Json
+    
+    $devCenterName = $outputs.dev_center_name.value
+    $resourceGroup = $outputs.resource_group_name.value
+    $networkConnectionName = $outputs.network_connection_name.value
+} finally {
+    Set-Location $originalDir
+}
 
 Write-Host "  ✓ DevCenter: $devCenterName" -ForegroundColor Green
 Write-Host "  ✓ Resource Group: $resourceGroup" -ForegroundColor Green
@@ -43,16 +52,22 @@ Write-Host "   • Click Save" -ForegroundColor Gray
 Write-Host ""
 
 Write-Host "2. Network Connection Domain Join Type" -ForegroundColor Cyan
-$ncInfo = az devcenter admin network-connection show `
+$ncOutput = az devcenter admin network-connection show `
     --name $networkConnectionName `
     --resource-group $resourceGroup `
-    --query "{domainJoinType:domainJoinType}" -o json 2>&1 | ConvertFrom-Json
+    --query "{domainJoinType:domainJoinType}" -o json 2>&1
 
-Write-Host "   Current setting: $($ncInfo.domainJoinType)" -ForegroundColor White
-if ($ncInfo.domainJoinType -eq "AzureADJoin") {
-    Write-Host "   ✓ Correct configuration for Intune enrollment" -ForegroundColor Green
+if ($LASTEXITCODE -eq 0) {
+    $ncInfo = $ncOutput | ConvertFrom-Json
+    Write-Host "   Current setting: $($ncInfo.domainJoinType)" -ForegroundColor White
+    if ($ncInfo.domainJoinType -eq "AzureADJoin") {
+        Write-Host "   ✓ Correct configuration for Intune enrollment" -ForegroundColor Green
+    } else {
+        Write-Host "   ⚠️  Should be 'AzureADJoin' for automatic Intune enrollment" -ForegroundColor Yellow
+    }
 } else {
-    Write-Host "   ⚠️  Should be 'AzureADJoin' for automatic Intune enrollment" -ForegroundColor Yellow
+    Write-Host "   ⚠️  Could not retrieve network connection details" -ForegroundColor Yellow
+    Write-Host "   Error: $ncOutput" -ForegroundColor Gray
 }
 Write-Host ""
 
