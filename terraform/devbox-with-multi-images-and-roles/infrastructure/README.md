@@ -149,7 +149,22 @@ az role assignment create `
   --scope $galleryId
 ```
 
-### Step 7: Sync Pools (Ongoing)
+### Step 7: Create Team Image Definitions (First Time Only)
+
+Development teams will need image definitions before they can build their first images:
+
+```powershell
+cd ..\images\packer\teams
+
+# Create definitions for each team image type
+.\create-image-definition.ps1 -ImageType vscode -ResourceGroup <rg-name> -GalleryName <gallery-name>
+.\create-image-definition.ps1 -ImageType dataeng -ResourceGroup <rg-name> -GalleryName <gallery-name>
+.\create-image-definition.ps1 -ImageType web -ResourceGroup <rg-name> -GalleryName <gallery-name>
+```
+
+**Note:** This is a one-time setup. Development teams can also run this themselves when they're ready to build their first image.
+
+### Step 8: Sync Pools (Ongoing)
 
 When development teams update definitions:
 

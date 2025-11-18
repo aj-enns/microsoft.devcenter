@@ -281,11 +281,13 @@ function Show-BuildResults {
         Write-Host ""
         
         $manifest = Get-Content $MANIFEST_FILE | ConvertFrom-Json
+        $build = $manifest.builds[0]
         Write-Info "Image Details:"
-        Write-Host "  Name: $($manifest.custom_data.image_name)"
-        Write-Host "  Version: $($manifest.custom_data.image_version)"
-        Write-Host "  Build Time: $($manifest.custom_data.build_time)"
-        Write-Host "  Description: $($manifest.custom_data.description)"
+        Write-Host "  Name: $($build.custom_data.image_name)"
+        Write-Host "  Version: $($build.custom_data.image_version)"
+        Write-Host "  Build Time: $($build.custom_data.build_time)"
+        Write-Host "  Description: $($build.custom_data.description)"
+        Write-Host "  Artifact ID: $($build.artifact_id)"
         Write-Host ""
     }
     

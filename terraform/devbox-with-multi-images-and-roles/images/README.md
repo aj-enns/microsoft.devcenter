@@ -174,6 +174,7 @@ images/
 │   │   └── windows-base.pkr.hcl            # Base Windows config
 │   │
 │   ├── teams/             # YOUR CUSTOMIZATIONS
+│   │   ├── create-image-definition.ps1     # Create team image definition
 │   │   ├── vscode-devbox.pkr.hcl
 │   │   ├── vscode-variables.pkrvars.hcl
 │   │   ├── vscode-variables.pkrvars.hcl.example
@@ -291,7 +292,29 @@ build {
 - ❌ Cannot remove Azure AD join configuration
 - ❌ Cannot skip compliance provisioners
 
-### Step 3: Validate Template
+### Step 3: Create Image Definition (First Time Only)
+
+Before building your first image version, create the image definition in the gallery:
+
+```powershell
+cd teams
+.\create-image-definition.ps1 -ImageType vscode -ResourceGroup <rg-name> -GalleryName <gallery-name>
+cd ..
+```
+
+This is a **one-time setup** per image type. The script will:
+- Check if the definition already exists
+- Create the image definition with proper metadata
+- Configure it for Windows, Generalized, TrustedLaunch
+
+**Example:**
+```powershell
+cd teams
+.\create-image-definition.ps1 -ImageType vscode -ResourceGroup rg-devbox-multi-roles -GalleryName galxvqypooxvqja4
+cd ..
+```
+
+### Step 4: Validate Template
 
 ```powershell
 .\build-image.ps1 -ImageType vscode -ValidateOnly
@@ -302,8 +325,9 @@ This checks:
 - Variables are properly defined
 - Azure authentication is working
 - Source image (SecurityBaselineImage) exists
+- Target image definition (VSCodeDevImage) exists
 
-### Step 4: Build Image
+### Step 5: Build Image
 
 ```powershell
 # Full build (30-60 minutes)

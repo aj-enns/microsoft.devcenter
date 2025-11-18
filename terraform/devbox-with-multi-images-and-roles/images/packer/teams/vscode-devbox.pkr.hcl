@@ -65,12 +65,6 @@ variable "vm_size" {
   default     = "Standard_D2s_v3"
 }
 
-variable "build_resource_group_name" {
-  type        = string
-  description = "Temporary resource group for Packer build resources"
-  default     = "rg-packer-vscode-build"
-}
-
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   image_name = "VSCodeDevImage"
@@ -88,10 +82,7 @@ source "azure-arm" "vscode_customization" {
   subscription_id    = var.subscription_id
 
   # Build Configuration
-  build_resource_group_name = var.build_resource_group_name
-  managed_image_resource_group_name = var.resource_group_name
-  managed_image_name = "packer-${local.image_name}-${local.timestamp}"
-  
+  # Publish directly to gallery (required for TrustedLaunch/SecureBoot support)
   location = var.location
   vm_size  = var.vm_size
 
@@ -109,7 +100,7 @@ source "azure-arm" "vscode_customization" {
     image_version  = var.baseline_image_version
   }
 
-  # Destination: VS Code Team Image
+  # Destination: VS Code Team Image (direct to gallery)
   shared_image_gallery_destination {
     subscription         = var.subscription_id
     resource_group       = var.resource_group_name
@@ -122,6 +113,11 @@ source "azure-arm" "vscode_customization" {
 
   # OS Configuration
   os_type = "Windows"
+
+  # Security Configuration - REQUIRED for TrustedLaunch source images
+  security_type       = "TrustedLaunch"
+  secure_boot_enabled = true
+  vtpm_enabled        = true
 
   # Communicator Settings
   communicator   = "winrm"
