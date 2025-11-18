@@ -1,0 +1,22 @@
+# Images Repository Code Owners
+# This file defines code ownership for custom image development
+# Development Teams own their team-specific images
+# Operations Team owns base templates and compliance requirements
+
+# Base templates and compliance requirements - Operations Team ONLY
+/packer/base/ @operations-team
+
+# Team-specific image customizations
+/packer/teams/vscode* @vscode-team-leads
+/packer/teams/java* @java-team-leads
+/packer/teams/dotnet* @dotnet-team-leads
+
+# DevBox Definitions - Development Team Leads with Operations review
+# Operations team should be notified of changes but dev leads can approve
+/definitions/ @dev-leads @operations-team
+
+# Build scripts - Any team lead can approve
+/packer/build-image.ps1 @dev-leads
+
+# Documentation
+/README.md @dev-leads @operations-team

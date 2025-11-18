@@ -1,0 +1,60 @@
+{
+  "definitions": [
+    {
+      "name": "VSCode-DevBox",
+      "imageDefinition": "VSCodeDevImage",
+      "compute": "general_i_8c32gb256ssd_v2",
+      "storage": "ssd_256gb",
+      "team": "vscode-team",
+      "autoUpdate": true,
+      "description": "VS Code development environment with Node.js, Python, .NET"
+    },
+    {
+      "name": "Java-DevBox",
+      "imageDefinition": "JavaDevImage",
+      "compute": "general_i_16c64gb512ssd_v2",
+      "storage": "ssd_512gb",
+      "team": "java-team",
+      "autoUpdate": true,
+      "description": "Java development environment with IntelliJ IDEA"
+    },
+    {
+      "name": "DotNet-DevBox",
+      "imageDefinition": "DotNetDevImage",
+      "compute": "general_i_8c32gb256ssd_v2",
+      "storage": "ssd_256gb",
+      "team": "dotnet-team",
+      "autoUpdate": true,
+      "description": ".NET development environment with Visual Studio 2022"
+    }
+  ],
+  "pools": [
+    {
+      "name": "VSCode-Development-Pool",
+      "definitionName": "VSCode-DevBox",
+      "administrator": "Enabled",
+      "schedule": {
+        "time": "17:00",
+        "timeZone": "Eastern Standard Time"
+      }
+    },
+    {
+      "name": "Java-Development-Pool",
+      "definitionName": "Java-DevBox",
+      "administrator": "Enabled",
+      "schedule": {
+        "time": "18:00",
+        "timeZone": "Eastern Standard Time"
+      }
+    },
+    {
+      "name": "DotNet-Development-Pool",
+      "definitionName": "DotNet-DevBox",
+      "administrator": "Enabled",
+      "schedule": {
+        "time": "17:00",
+        "timeZone": "Eastern Standard Time"
+      }
+    }
+  ]
+}

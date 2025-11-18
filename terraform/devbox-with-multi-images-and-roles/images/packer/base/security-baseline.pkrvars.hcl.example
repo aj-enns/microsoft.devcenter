@@ -1,0 +1,30 @@
+# Example variables file for Security Baseline Image
+# Copy this file to security-baseline.pkrvars.hcl and fill in your values
+
+# Azure subscription where resources will be created
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Resource group containing the Azure Compute Gallery
+resource_group_name = "rg-devcenter-gallery"
+
+# Name of the Azure Compute Gallery
+gallery_name = "galdevboxshared"
+
+# Semantic version for this baseline image
+# Increment this for each new build:
+# - Major (1.x.x): Breaking changes to security baseline
+# - Minor (x.1.x): New security features or tools added
+# - Patch (x.x.1): Bug fixes or minor updates
+image_version = "1.0.0"
+
+# Azure region for temporary build resources
+location = "eastus"
+
+# VM size for the build process
+# Standard_D2s_v3 is sufficient for most builds
+# Increase for faster builds: Standard_D4s_v3, Standard_D8s_v3
+vm_size = "Standard_D2s_v3"
+
+# Temporary resource group for Packer build
+# This will be auto-created and deleted during the build
+build_resource_group_name = "rg-packer-baseline-build"
