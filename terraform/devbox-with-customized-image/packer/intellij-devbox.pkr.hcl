@@ -231,6 +231,27 @@ build {
     valid_exit_codes = [0, 3010]
   }
 
+  # Install Ubuntu distribution for WSL
+  provisioner "powershell" {
+    inline = [
+      "Write-Output 'Installing Ubuntu distribution for WSL...'",
+      "$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')",
+      "",
+      "# Install Ubuntu using wsl --install",
+      "wsl --install -d Ubuntu-22.04 --no-launch",
+      "",
+      "# Wait for installation to complete",
+      "Start-Sleep -Seconds 30",
+      "",
+      "# Verify installation",
+      "$distributions = wsl --list --quiet",
+      "Write-Output \"Installed WSL distributions: $distributions\"",
+      "",
+      "Write-Output 'Ubuntu installation complete'"
+    ]
+    valid_exit_codes = [0, 3010]
+  }
+
   # Configure VS Code extensions (same as original image)
   provisioner "powershell" {
     inline = [
