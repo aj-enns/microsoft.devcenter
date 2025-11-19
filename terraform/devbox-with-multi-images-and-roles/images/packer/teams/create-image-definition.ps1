@@ -114,7 +114,7 @@ try {
         --os-type Windows `
         --os-state Generalized `
         --hyper-v-generation V2 `
-        --features SecurityType=TrustedLaunch `
+        --features "SecurityType=TrustedLaunch IsHibernateSupported=true" `
         --description $config.Description
 
     if ($LASTEXITCODE -ne 0) {

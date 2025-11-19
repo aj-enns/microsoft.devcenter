@@ -3,17 +3,17 @@
     {
       "name": "security_baseline",
       "builder_type": "azure-arm",
-      "build_time": 1763480505,
+      "build_time": 1763511129,
       "files": null,
       "artifact_id": "/subscriptions/1b2c6be0-ed07-4512-b69c-8c080c09c608/resourceGroups/rg-devbox-multi-roles/providers/Microsoft.Compute/images/SecurityBaselineImage-1.0.0",
-      "packer_run_uuid": "3a59a540-29bd-22f3-cb3f-d1085db349f0",
+      "packer_run_uuid": "9384f65d-dd6f-eb68-f3e7-e707ad951a71",
       "custom_data": {
-        "build_time": "2025-11-18T15:41:45Z",
+        "build_time": "2025-11-19T00:12:09Z",
         "description": "Golden security baseline image for DevBox - Operations Team Managed",
         "image_name": "SecurityBaselineImage",
         "image_version": "1.0.0"
       }
     }
   ],
-  "last_run_uuid": "3a59a540-29bd-22f3-cb3f-d1085db349f0"
+  "last_run_uuid": "9384f65d-dd6f-eb68-f3e7-e707ad951a71"
 }

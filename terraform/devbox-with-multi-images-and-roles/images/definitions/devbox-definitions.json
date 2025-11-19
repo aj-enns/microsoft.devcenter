@@ -6,7 +6,7 @@
       "imageVersion": "1.0.0",
       "computeSku": "general_i_8c32gb256ssd_v2",
       "storageType": "ssd_256gb",
-      "hibernationSupport": "Enabled",
+      "hibernationSupport": "Disabled",
       "team": "vscode-team",
       "description": "VS Code development environment with Node.js, Python, .NET"
     },
@@ -16,7 +16,7 @@
       "imageVersion": "1.0.0",
       "computeSku": "general_i_16c64gb512ssd_v2",
       "storageType": "ssd_256gb",
-      "hibernationSupport": "Enabled",
+      "hibernationSupport": "Disabled",
       "team": "java-team",
       "description": "Java development environment with IntelliJ IDEA"
     },
@@ -26,7 +26,7 @@
       "imageVersion": "1.0.0",
       "computeSku": "general_i_8c32gb256ssd_v2",
       "storageType": "ssd_256gb",
-      "hibernationSupport": "Enabled",
+      "hibernationSupport": "Disabled",
       "team": "dotnet-team",
       "description": ".NET development environment with Visual Studio 2022"
     }

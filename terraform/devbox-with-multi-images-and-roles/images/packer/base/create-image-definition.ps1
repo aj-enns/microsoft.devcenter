@@ -123,7 +123,7 @@ az sig image-definition create `
     --hyper-v-generation V2 `
     --location $location `
     --description "Golden Security Baseline Image - Mandatory foundation for all DevBox images. Contains security hardening, compliance tools, and Azure AD join configuration." `
-    --features "SecurityType=TrustedLaunch" `
+    --features "SecurityType=TrustedLaunch IsHibernateSupported=true" `
     --tags "ManagedBy=Operations" "Purpose=SecurityBaseline" "Type=GoldenImage"
 
 if ($LASTEXITCODE -ne 0) {

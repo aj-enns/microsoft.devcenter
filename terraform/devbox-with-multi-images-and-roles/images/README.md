@@ -80,7 +80,32 @@ git clone <images-repo-url>
 cd images/packer
 ```
 
-### Step 2: Configure Your Team's Variables
+### Step 2: Create Image Definition (First Time Only)
+
+Before building your first image, create the image definition in the Azure Compute Gallery:
+
+```powershell
+cd teams
+.\create-image-definition.ps1 -ImageType vscode -ResourceGroup <rg-name> -GalleryName <gallery-name>
+cd ..
+```
+
+**Example:**
+```powershell
+cd teams
+.\create-image-definition.ps1 -ImageType vscode -ResourceGroup rg-devbox-multi-roles -GalleryName galxvqypooxvqja4
+cd ..
+```
+
+This creates the image definition with:
+- TrustedLaunch security type
+- Hibernation support enabled
+- Proper publisher/offer/SKU metadata
+- Windows OS, Generalized state
+
+**Note:** This is a one-time setup per image type. If the definition already exists, the script will skip creation.
+
+### Step 3: Configure Your Team's Variables
 
 ```powershell
 # Copy example file
@@ -112,7 +137,7 @@ location = "eastus"
 vm_size = "Standard_D2s_v3"
 ```
 
-### Step 3: Customize Your Template (Optional)
+### Step 4: Customize Your Template (Optional)
 
 Edit `teams/vscode-devbox.pkr.hcl` to add your team's tools:
 
@@ -126,7 +151,7 @@ provisioner "powershell" {
 }
 ```
 
-### Step 4: Build Your Image
+### Step 5: Build Your Image
 
 ```powershell
 # Validate template
@@ -136,7 +161,7 @@ provisioner "powershell" {
 .\build-image.ps1 -ImageType vscode
 ```
 
-### Step 5: Update Definitions
+### Step 7: Update Definitions
 
 Edit `definitions/devbox-definitions.json`:
 
@@ -148,13 +173,14 @@ Edit `definitions/devbox-definitions.json`:
       "imageDefinition": "VSCodeDevImage",
       "compute": "general_i_8c32gb256ssd_v2",
       "storage": "ssd_256gb",
-      "team": "vscode-team"
+      "team": "vscode-team",
+      "hibernationSupport": "Enabled"
     }
   ]
 }
 ```
 
-### Step 6: Create Pull Request
+### Step 8: Create Pull Request
 
 1. Commit changes: `git commit -am "Add VS Code DevBox v1.0.0"`
 2. Push to branch: `git push origin feature/vscode-devbox`
@@ -291,28 +317,6 @@ build {
 - ❌ Cannot disable Windows Defender or Firewall
 - ❌ Cannot remove Azure AD join configuration
 - ❌ Cannot skip compliance provisioners
-
-### Step 3: Create Image Definition (First Time Only)
-
-Before building your first image version, create the image definition in the gallery:
-
-```powershell
-cd teams
-.\create-image-definition.ps1 -ImageType vscode -ResourceGroup <rg-name> -GalleryName <gallery-name>
-cd ..
-```
-
-This is a **one-time setup** per image type. The script will:
-- Check if the definition already exists
-- Create the image definition with proper metadata
-- Configure it for Windows, Generalized, TrustedLaunch
-
-**Example:**
-```powershell
-cd teams
-.\create-image-definition.ps1 -ImageType vscode -ResourceGroup rg-devbox-multi-roles -GalleryName galxvqypooxvqja4
-cd ..
-```
 
 ### Step 4: Validate Template
 
