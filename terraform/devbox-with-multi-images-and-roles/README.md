@@ -92,12 +92,23 @@ devbox-with-multi-images-and-roles/
 1. **Build Custom Image**
    ```powershell
    cd images/packer
-   cp teams/vscode-variables.pkrvars.hcl.example teams/vscode-variables.pkrvars.hcl
+   cp teams/java-variables.pkrvars.hcl.example teams/java-variables.pkrvars.hcl
    # Edit with your values
-   .\build-image.ps1 -ImageType vscode
+   .\build-image.ps1 -ImageType java
    ```
 
-2. **Update Definitions**
+2. **Validate and Update Definitions**
+   ```powershell
+   cd ../../infrastructure/scripts
+   
+   # Validate configuration first
+   .\00-validate-definitions.ps1
+   
+   # Auto-fix common issues (storage mismatches)
+   .\00-validate-definitions.ps1 -Fix
+   ```
+
+3. **Update DevBox Definitions**
    ```json
    // Edit images/definitions/devbox-definitions.json
    {

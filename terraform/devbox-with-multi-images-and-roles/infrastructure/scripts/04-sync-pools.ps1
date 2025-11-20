@@ -94,14 +94,37 @@ foreach ($pool in $definitions.pools) {
     $definitionName = $pool.definitionName
     
     Write-Host "  Processing pool: $poolName" -ForegroundColor Cyan
+    Write-Host "    Target definition: $definitionName" -ForegroundColor Gray
     
     # Check if definition exists
     if ($definitionName -notin $existingDefArray) {
-        Write-Host "    ⚠️  Definition '$definitionName' not found in DevCenter" -ForegroundColor Yellow
-        Write-Host "    Skipping pool creation. Image team should build this image first." -ForegroundColor Yellow
+        Write-Host "    ✗ Definition '$definitionName' not found in DevCenter" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "    Required steps to create this definition:" -ForegroundColor Yellow
+        
+        # Find the definition in the definitions file
+        $defConfig = $definitions.definitions | Where-Object { $_.name -eq $definitionName } | Select-Object -First 1
+        
+        if ($defConfig) {
+            Write-Host "      1. Ensure image exists: $($defConfig.imageName) v$($defConfig.imageVersion)" -ForegroundColor Yellow
+            Write-Host "         Check with: az sig image-version show \\" -ForegroundColor Gray
+            Write-Host "           --gallery-name $($outputs.gallery_name.value) \\" -ForegroundColor Gray
+            Write-Host "           --resource-group $resourceGroup \\" -ForegroundColor Gray
+            Write-Host "           --gallery-image-definition $($defConfig.imageName) \\" -ForegroundColor Gray
+            Write-Host "           --gallery-image-version $($defConfig.imageVersion)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "      2. Create the definition: .\03-create-definitions.ps1" -ForegroundColor Yellow
+        } else {
+            Write-Host "      1. Add definition config to: images/definitions/devbox-definitions.json" -ForegroundColor Yellow
+            Write-Host "      2. Build the image using Packer" -ForegroundColor Yellow
+            Write-Host "      3. Run: .\03-create-definitions.ps1" -ForegroundColor Yellow
+        }
+        
         Write-Host ""
         continue
     }
+    
+    Write-Host "    ✓ Definition exists" -ForegroundColor Green
     
     # Check if pool already exists
     $poolExists = az devcenter admin pool show `
@@ -150,11 +173,31 @@ Write-Host "  ✓ Pool Synchronization Complete!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 
+# Count pools that were skipped due to missing definitions
+$missingDefs = @()
+foreach ($pool in $definitions.pools) {
+    if ($pool.definitionName -notin $existingDefArray) {
+        $missingDefs += $pool.definitionName
+    }
+}
+
 Write-Host "Summary:" -ForegroundColor Cyan
-Write-Host "  • Definitions checked: $($definitions.definitions.Count)" -ForegroundColor Gray
+Write-Host "  • Definitions in file: $($definitions.definitions.Count)" -ForegroundColor Gray
+Write-Host "  • Definitions in DevCenter: $($existingDefArray.Count)" -ForegroundColor Gray
 Write-Host "  • Pools configured: $($definitions.pools.Count)" -ForegroundColor Gray
+if ($missingDefs.Count -gt 0) {
+    Write-Host "  • Missing definitions: $($missingDefs.Count)" -ForegroundColor Yellow
+    Write-Host "    $($missingDefs -join ', ')" -ForegroundColor Yellow
+}
 Write-Host ""
 
-Write-Host "Dev Portal: https://devportal.microsoft.com" -ForegroundColor Yellow
+if ($missingDefs.Count -gt 0) {
+    Write-Host "⚠️  Action Required:" -ForegroundColor Yellow
+    Write-Host "  Some pools couldn't be created due to missing definitions." -ForegroundColor Yellow
+    Write-Host "  Run .\03-create-definitions.ps1 after building the required images." -ForegroundColor Yellow
+    Write-Host ""
+}
+
+Write-Host "Dev Portal: https://devportal.microsoft.com" -ForegroundColor Cyan
 Write-Host "Users can now provision Dev Boxes from the available pools." -ForegroundColor Gray
 Write-Host ""

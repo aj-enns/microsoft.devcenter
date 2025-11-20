@@ -25,7 +25,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('vscode', 'dataeng', 'web')]
+    [ValidateSet('vscode', 'dataeng', 'web', 'javadev')]
     [string]$ImageType,
 
     [Parameter(Mandatory = $true)]
@@ -59,6 +59,13 @@ $imageConfigs = @{
         Offer = 'WebDevelopment'
         Sku = 'Web-Latest'
         Description = 'Web development environment with Node.js and modern frameworks'
+    }
+    'javadev' = @{
+        Name = 'JavaDevImage'
+        Publisher = 'DevTeams'
+        Offer = 'JavaDevelopment'
+        Sku = 'JavaDev-Latest'
+        Description = 'Java development environment with JDK 11/17/21, Maven, Gradle, IntelliJ, Eclipse, WSL 2, and Ubuntu'
     }
 }
 

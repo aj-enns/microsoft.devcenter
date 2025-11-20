@@ -94,8 +94,50 @@ $existingDefNames = if ($existingDefs) { $existingDefs | ForEach-Object { $_.nam
 Write-Host "  ✓ Found $($existingDefNames.Count) existing definitions" -ForegroundColor Green
 Write-Host ""
 
+# Get available SKUs and their capabilities
+Write-Host "Step 5: Loading available DevBox SKUs..." -ForegroundColor Yellow
+$availableSkus = az devcenter admin sku list --query "[].{name:name, capabilities:capabilities}" | ConvertFrom-Json
+$skuLookup = @{}
+foreach ($sku in $availableSkus) {
+    $skuLookup[$sku.name] = $sku.capabilities
+}
+Write-Host "  ✓ Loaded $($availableSkus.Count) SKUs" -ForegroundColor Green
+Write-Host ""
+
+# Helper function to validate and auto-correct storage type
+function Get-ValidStorageType {
+    param(
+        [string]$SkuName,
+        [string]$RequestedStorage
+    )
+    
+    # Extract storage from SKU name (e.g., "256ssd", "512ssd", "1024ssd")
+    if ($SkuName -match '(\d+)ssd') {
+        $skuStorageGB = $Matches[1]
+        
+        # If requested storage doesn't match SKU, use SKU's storage
+        if ($RequestedStorage -match 'ssd_(\d+)gb') {
+            $requestedGB = $Matches[1]
+            if ($requestedGB -ne $skuStorageGB) {
+                Write-Host "      ⚠️  Auto-correcting storage: $RequestedStorage -> ssd_${skuStorageGB}gb (matches SKU)" -ForegroundColor Yellow
+                return "ssd_${skuStorageGB}gb"
+            }
+        }
+        
+        # If storage is generic "ssd", return SKU-specific value
+        if ($RequestedStorage -eq "ssd") {
+            return "ssd_${skuStorageGB}gb"
+        }
+        
+        return $RequestedStorage
+    }
+    
+    # If SKU doesn't have storage in name, use requested value
+    return $RequestedStorage
+}
+
 # Create or update definitions
-Write-Host "Step 5: Creating/updating DevBox definitions..." -ForegroundColor Yellow
+Write-Host "Step 6: Creating/updating DevBox definitions..." -ForegroundColor Yellow
 Write-Host ""
 
 $created = 0
@@ -106,7 +148,21 @@ foreach ($def in $definitionsFile.definitions) {
     Write-Host "  Processing: $($def.name)" -ForegroundColor Cyan
     Write-Host "    Image: $($def.imageName) v$($def.imageVersion)" -ForegroundColor Gray
     Write-Host "    SKU: $($def.computeSku)" -ForegroundColor Gray
-    Write-Host "    Storage: $($def.storageType)" -ForegroundColor Gray
+    
+    # Validate SKU exists
+    if (-not $skuLookup.ContainsKey($def.computeSku)) {
+        Write-Host "    ✗ Invalid SKU: $($def.computeSku)" -ForegroundColor Red
+        Write-Host "      Run: az devcenter admin sku list --query '[].name' -o table" -ForegroundColor Yellow
+        $failed++
+        Write-Host ""
+        continue
+    }
+    
+    # Auto-correct storage type based on SKU
+    $originalStorage = $def.storageType
+    $validatedStorage = Get-ValidStorageType -SkuName $def.computeSku -RequestedStorage $originalStorage
+    
+    Write-Host "    Storage: $validatedStorage" -ForegroundColor Gray
     
     # Check if definition already exists
     if ($def.name -in $existingDefNames) {
@@ -150,7 +206,7 @@ foreach ($def in $definitionsFile.definitions) {
             --location $location `
             --image-reference id="$imageId" `
             --sku name="$($def.computeSku)" `
-            --os-storage-type "$($def.storageType)" `
+            --os-storage-type "$validatedStorage" `
             --hibernate-support "$($def.hibernationSupport)" 2>&1
         
         if ($LASTEXITCODE -eq 0) {

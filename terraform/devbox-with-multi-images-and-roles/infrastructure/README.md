@@ -158,8 +158,8 @@ cd ..\images\packer\teams
 
 # Create definitions for each team image type
 .\create-image-definition.ps1 -ImageType vscode -ResourceGroup <rg-name> -GalleryName <gallery-name>
-.\create-image-definition.ps1 -ImageType dataeng -ResourceGroup <rg-name> -GalleryName <gallery-name>
-.\create-image-definition.ps1 -ImageType web -ResourceGroup <rg-name> -GalleryName <gallery-name>
+.\create-image-definition.ps1 -ImageType java -ResourceGroup <rg-name> -GalleryName <gallery-name>
+.\create-image-definition.ps1 -ImageType dotnet -ResourceGroup <rg-name> -GalleryName <gallery-name>
 ```
 
 **Note:** This is a one-time setup. Development teams can also run this themselves when they're ready to build their first image.
@@ -175,23 +175,45 @@ cd infrastructure\scripts
 
 **Important:** Custom images take **5-30 minutes** to sync from Compute Gallery to DevCenter. Run this script periodically until images appear. Only proceed to Step 9 when images are synced.
 
-### Step 9: Create DevBox Definitions
+### Step 9: Validate and Create DevBox Definitions
 
-Once images are synced to DevCenter, create DevBox definitions:
+Once images are synced to DevCenter, validate the configuration and create DevBox definitions:
 
 ```powershell
+# First, validate the definitions configuration
+.\00-validate-definitions.ps1
+
+# Auto-fix common issues (storage type mismatches)
+.\00-validate-definitions.ps1 -Fix
+
+# If validation passes, create the definitions
 .\03-create-definitions.ps1
 ```
 
-This script links the gallery images to compute/storage configurations in DevCenter.
+The validation script checks:
+- SKU names are valid against Azure's available SKUs
+- Storage types match the SKU requirements (e.g., `512ssd` SKU requires `ssd_512gb` storage)
+- Images exist in the gallery
+- Pool references are correct
+
+**Enhanced Features:**
+- ✅ Auto-validation of SKU names
+- ✅ Auto-correction of storage type mismatches
+- ✅ Clear error messages with fix suggestions
+- ✅ Pre-flight checks before deployment
 
 ### Step 10: Sync Pools (Ongoing)
 
 When development teams update definitions:
 
 ```powershell
-.\scripts\04-sync-pools.ps1
+.\04-sync-pools.ps1
 ```
+
+This script now provides detailed guidance when pools can't be created, including:
+- Which images are missing
+- Exact commands to check image availability
+- Step-by-step fix instructions
 
 ## 📁 Repository Structure
 
@@ -215,10 +237,11 @@ infrastructure/
 │       └── outputs.tf
 │
 ├── scripts/
+│   ├── 00-validate-definitions.ps1    # Validate definitions before deployment (NEW!)
 │   ├── 01-deploy-infrastructure.ps1   # Deploy core infrastructure
 │   ├── 02-attach-networks.ps1         # Configure networks
-│   ├── 03-configure-intune.ps1        # Intune configuration (optional)
-│   └── 04-sync-pools.ps1              # Sync pools from definitions
+│   ├── 03-create-definitions.ps1      # Create DevBox definitions (ENHANCED!)
+│   └── 04-sync-pools.ps1              # Sync pools from definitions (ENHANCED!)
 │
 ├── policies/
 │   └── compliance-settings.json       # Compliance policies
@@ -600,6 +623,142 @@ az consumption usage list \
 - Right-size VM SKUs based on actual usage
 - Remove unused gallery image versions
 - Use Standard_LRS storage for gallery images
+
+## 🛠️ Enhanced Scripts
+
+The infrastructure scripts have been significantly improved to be more resilient and provide better guidance:
+
+### 00-validate-definitions.ps1 (NEW!)
+
+**Purpose:** Pre-flight validation of DevBox definitions before deployment.
+
+```powershell
+# Validate configurations
+.\00-validate-definitions.ps1
+
+# Auto-fix storage type mismatches
+.\00-validate-definitions.ps1 -Fix
+```
+
+**What it validates:**
+- SKU names against Azure's available SKUs
+- Storage types match SKU requirements (e.g., `512ssd` → `ssd_512gb`)
+- Images exist in the gallery with correct versions
+- Pool references point to valid definitions
+- No orphaned configurations
+
+**Auto-fix capability:** Automatically corrects storage type mismatches when run with `-Fix` flag.
+
+### 03-create-definitions.ps1 (ENHANCED!)
+
+**Purpose:** Create DevBox definitions in DevCenter.
+
+**Enhancements:**
+- Loads all available Azure SKUs and validates against them
+- Auto-corrects storage types based on SKU requirements
+- Provides actionable error messages with exact fix commands
+- Shows which images are missing and how to build them
+
+**Example improved error:**
+```
+✗ Invalid SKU: general_i_16c64gb512_v2
+  Run: az devcenter admin sku list --query '[].name' -o table
+  
+⚠️ Storage mismatch: ssd_256gb (SKU requires ssd_512gb)
+  → Auto-correcting to: ssd_512gb
+```
+
+### 04-sync-pools.ps1 (ENHANCED!)
+
+**Purpose:** Create and sync DevBox pools based on definitions file.
+
+**Enhancements:**
+- Detailed guidance when definitions are missing
+- Shows exact commands to check image availability
+- Links missing definitions to required images
+- Provides summary of missing vs available definitions
+
+**Example improved output:**
+```
+✗ Definition 'Java-DevBox' not found in DevCenter
+
+Required steps to create this definition:
+  1. Ensure image exists: JavaDevImage v1.0.0
+     Check with: az sig image-version show \
+       --gallery-name galxvqypooxvqja4 \
+       --resource-group rg-devbox-multi-roles \
+       --gallery-image-definition JavaDevImage \
+       --gallery-image-version 1.0.0
+  
+  2. Create the definition: .\03-create-definitions.ps1
+```
+
+### Script Workflow
+
+**Recommended order for new deployments:**
+
+1. **Validate** → Catch configuration errors early
+   ```powershell
+   .\00-validate-definitions.ps1 -Fix
+   ```
+
+2. **Create Definitions** → Link images to compute/storage
+   ```powershell
+   .\03-create-definitions.ps1
+   ```
+
+3. **Sync Pools** → Make pools available to users
+   ```powershell
+   .\04-sync-pools.ps1
+   ```
+
+**For ongoing updates:**
+
+When development teams add new image definitions:
+```powershell
+# Validate new definitions
+.\00-validate-definitions.ps1
+
+# If validation passes
+.\03-create-definitions.ps1
+.\04-sync-pools.ps1
+```
+
+### Common Issues Auto-Detected
+
+| Issue | Detection | Auto-Fix |
+|-------|-----------|----------|
+| Invalid SKU name | ✅ Validated against Azure API | ❌ Manual fix required |
+| Storage type mismatch | ✅ Detects mismatch with SKU | ✅ Auto-corrects with `-Fix` |
+| Missing image | ✅ Checks gallery availability | ❌ Build image first |
+| Orphaned pool reference | ✅ Validates definition exists | ❌ Fix config file |
+
+### Troubleshooting Script Issues
+
+**Validation fails with "SKU not found":**
+```powershell
+# List valid SKUs
+az devcenter admin sku list --query '[].name' -o table
+
+# Update devbox-definitions.json with valid SKU
+```
+
+**"Image not found" during validation:**
+```powershell
+# Check if image exists in gallery
+az sig image-version list \
+  --gallery-name <gallery> \
+  --resource-group <rg> \
+  --gallery-image-definition <image-name> -o table
+
+# If missing, build the image first
+cd ../images/packer/teams
+.\build-image.ps1 -ImageType <team>
+```
+
+**Storage type keeps getting corrected:**
+
+This is intentional! The SKU determines the storage size. If `general_i_16c64gb512ssd_v2` is specified, storage must be `ssd_512gb` (or just `ssd`), not `ssd_256gb`.
 
 ## 🔄 CI/CD Integration
 

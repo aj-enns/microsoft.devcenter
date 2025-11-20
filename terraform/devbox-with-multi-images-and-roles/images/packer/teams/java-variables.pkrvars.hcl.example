@@ -1,0 +1,31 @@
+# Example variables file for Java Dev Team Image
+# Copy this file to javadev-variables.pkrvars.hcl and fill in your values
+
+# Azure subscription where resources will be created
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Resource group containing the Azure Compute Gallery
+resource_group_name = "rg-devcenter-gallery"
+
+# Name of the Azure Compute Gallery
+gallery_name = "galdevboxshared"
+
+# Version of SecurityBaselineImage to build from
+# This should match an existing baseline image version in the gallery
+# Check with: az sig image-version list --gallery-name <gallery> --gallery-image-definition SecurityBaselineImage
+baseline_image_version = "1.0.0"
+
+# Version for this Java Dev team image
+# Increment this for each new build:
+# - Major (1.x.x): Breaking changes (remove major tools, change OS)
+# - Minor (x.1.x): New features or tools added
+# - Patch (x.x.1): Bug fixes or minor updates
+image_version = "1.0.0"
+
+# Azure region for temporary build resources
+location = "eastus"
+
+# VM size for the build process
+# Standard_D4s_v3 is recommended for Java dev builds (WSL requires more resources)
+# Increase for faster builds: Standard_D8s_v3, Standard_D16s_v3
+vm_size = "Standard_D4s_v3"
