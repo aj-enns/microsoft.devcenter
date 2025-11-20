@@ -13,6 +13,8 @@ This document provides visual representations of the DevBox architecture, showin
 
 ## High-Level Architecture
 
+&nbsp;
+
 ```mermaid
 graph TB
     subgraph "Infrastructure Repository (Operations Team)"
@@ -84,6 +86,8 @@ graph TB
 
 ### Infrastructure Repository (Operations)
 
+&nbsp;
+
 ```mermaid
 graph TB
     subgraph "Infrastructure Repo"
@@ -122,6 +126,8 @@ graph TB
 
 ### Images Repository (Development Teams)
 
+&nbsp;
+
 ```mermaid
 graph TB
     subgraph "Images Repo"
@@ -157,6 +163,8 @@ graph TB
 ## Workflow Diagrams
 
 ### Image Creation & Deployment
+
+&nbsp;
 
 ```mermaid
 sequenceDiagram
@@ -194,6 +202,8 @@ sequenceDiagram
 
 ### Infrastructure Deployment
 
+&nbsp;
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -225,6 +235,8 @@ sequenceDiagram
 ```
 
 ### Definition Update Flow
+
+&nbsp;
 
 ```mermaid
 sequenceDiagram
@@ -261,6 +273,8 @@ sequenceDiagram
 ## Role Responsibilities
 
 ### Operations Team
+
+&nbsp;
 
 ```mermaid
 graph TB
@@ -308,6 +322,8 @@ graph TB
 
 ### Development Teams
 
+&nbsp;
+
 ```mermaid
 graph TB
     A[Development Teams] --> B[Custom Images]
@@ -348,6 +364,8 @@ graph TB
 
 ### End Users (Developers)
 
+&nbsp;
+
 ```mermaid
 graph LR
     A[End User] --> B[Access Portal]
@@ -373,6 +391,8 @@ graph LR
 ## Security & Compliance Flow
 
 ### Security Baseline Inheritance
+
+&nbsp;
 
 ```mermaid
 graph TD
@@ -419,6 +439,8 @@ graph TD
 
 ### Compliance Validation Process
 
+&nbsp;
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -452,6 +474,8 @@ sequenceDiagram
 ```
 
 ## Network Architecture
+
+&nbsp;
 
 ```mermaid
 graph TB
@@ -541,6 +565,8 @@ graph TB
 
 ### Network Traffic Flow
 
+&nbsp;
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -571,6 +597,8 @@ sequenceDiagram
 ## Data Flow
 
 ### Image Build Process
+
+&nbsp;
 
 ```mermaid
 flowchart TD
@@ -606,6 +634,8 @@ flowchart TD
 ```
 
 ### DevBox Provisioning Flow
+
+&nbsp;
 
 ```mermaid
 flowchart TD
@@ -648,6 +678,8 @@ flowchart TD
 ```
 
 ## CI/CD Integration
+
+&nbsp;
 
 ```mermaid
 graph LR
