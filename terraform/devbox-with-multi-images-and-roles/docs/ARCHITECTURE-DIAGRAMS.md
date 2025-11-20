@@ -60,24 +60,24 @@ graph TB
     B --> M
     M --> O
 
-    style A fill:#e1f5ff
-    style B fill:#e1f5ff
-    style C fill:#e1f5ff
-    style D fill:#e1f5ff
-    style E fill:#fff4e1
-    style F fill:#fff4e1
-    style G fill:#fff4e1
-    style H fill:#fff4e1
-    style I fill:#e8f5e9
-    style J fill:#e8f5e9
-    style K fill:#e8f5e9
-    style L fill:#e8f5e9
-    style M fill:#e8f5e9
+    style A fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style B fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style C fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style D fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style E fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style F fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style G fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style H fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style I fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style J fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style K fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style L fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style M fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
 ```
 
 **Legend:**
 - 🔵 Blue = Infrastructure Repository (Operations)
-- 🟡 Yellow = Images Repository (Development Teams)
+- 🟠 Orange = Images Repository (Development Teams)
 - 🟢 Green = Azure Resources
 
 ## Repository Separation
@@ -111,10 +111,10 @@ graph TB
         D --> D3[gallery-module/]
     end
     
-    style A fill:#e1f5ff
-    style B fill:#e1f5ff
-    style C fill:#e1f5ff
-    style D fill:#e1f5ff
+    style A fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style B fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style C fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style D fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
 ```
 
 **Owner:** @operations-team @network-team @security-team  
@@ -146,9 +146,9 @@ graph TB
         C --> C2[create-image-definition.ps1]
     end
     
-    style A1 fill:#ffebee
-    style A2 fill:#fff4e1
-    style B fill:#e3f2fd
+    style A1 fill:#c62828,stroke:#b71c1c,stroke-width:2px,color:#fff
+    style A2 fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style B fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
 ```
 
 **Owner:** @dev-teams (per team subfolder)  
@@ -290,12 +290,12 @@ graph TB
     F --> F2[Cost Tracking]
     F --> F3[Usage Analytics]
     
-    style A fill:#e1f5ff
-    style B fill:#e3f2fd
-    style C fill:#ffebee
-    style D fill:#e8f5e9
-    style E fill:#fff9c4
-    style F fill:#f3e5f5
+    style A fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style B fill:#0277bd,stroke:#01579b,stroke-width:2px,color:#fff
+    style C fill:#c62828,stroke:#b71c1c,stroke-width:2px,color:#fff
+    style D fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style E fill:#f9a825,stroke:#f57f17,stroke-width:2px,color:#000
+    style F fill:#7b1fa2,stroke:#4a148c,stroke-width:2px,color:#fff
 ```
 
 **Key Activities:**
@@ -331,11 +331,11 @@ graph TB
     E --> E2[Update Definitions JSON]
     E --> E3[Submit PRs]
     
-    style A fill:#fff4e1
-    style B fill:#fff9c4
-    style C fill:#e8f5e9
-    style D fill:#e3f2fd
-    style E fill:#f3e5f5
+    style A fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style B fill:#f9a825,stroke:#f57f17,stroke-width:2px,color:#000
+    style C fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style D fill:#0277bd,stroke:#01579b,stroke-width:2px,color:#fff
+    style E fill:#7b1fa2,stroke:#4a148c,stroke-width:2px,color:#fff
 ```
 
 **Key Activities:**
@@ -359,8 +359,8 @@ graph LR
     F --> G[Auto-stop Evening]
     G --> H[Resume Tomorrow]
     
-    style A fill:#e8f5e9
-    style F fill:#fff4e1
+    style A fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style F fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
 ```
 
 **Key Activities:**
@@ -402,19 +402,19 @@ graph TD
     O --> Q[Production Ready]
     P --> R[Fix & Rebuild]
     
-    style A fill:#e8f5e9
-    style B fill:#ffebee
-    style C fill:#ffcdd2
-    style D fill:#ffcdd2
-    style E fill:#ffcdd2
-    style F fill:#ffcdd2
-    style G fill:#ffcdd2
-    style H fill:#ffcdd2
-    style I fill:#ffcdd2
-    style J fill:#fff4e1
-    style N fill:#fff9c4
-    style O fill:#c8e6c9
-    style P fill:#ffcdd2
+    style A fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style B fill:#c62828,stroke:#b71c1c,stroke-width:2px,color:#fff
+    style C fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style D fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style E fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style F fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style G fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style H fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style I fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
+    style J fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style N fill:#f9a825,stroke:#f57f17,stroke-width:2px,color:#000
+    style O fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style P fill:#d32f2f,stroke:#c62828,stroke-width:2px,color:#fff
 ```
 
 ### Compliance Validation Process
@@ -530,13 +530,13 @@ graph TB
     INTUNE -.Manages.- DB2
     INTUNE -.Manages.- DB3
     
-    style DC fill:#e1f5ff
-    style GALLERY fill:#e8f5e9
-    style DB1 fill:#fff4e1
-    style DB2 fill:#fff4e1
-    style DB3 fill:#fff4e1
-    style FW fill:#ffebee
-    style NSG fill:#ffebee
+    style DC fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style GALLERY fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style DB1 fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style DB2 fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style DB3 fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style FW fill:#c62828,stroke:#b71c1c,stroke-width:2px,color:#fff
+    style NSG fill:#c62828,stroke:#b71c1c,stroke-width:2px,color:#fff
 ```
 
 ### Network Traffic Flow
@@ -598,11 +598,11 @@ flowchart TD
     CLEANUP --> NOTIFY[Notify Operations]
     NOTIFY --> END[Image Ready]
     
-    style PULL fill:#e8f5e9
-    style CUSTOM fill:#fff4e1
-    style SECURITY fill:#ffebee
-    style UPLOAD fill:#e8f5e9
-    style END fill:#c8e6c9
+    style PULL fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style CUSTOM fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style SECURITY fill:#c62828,stroke:#b71c1c,stroke-width:2px,color:#fff
+    style UPLOAD fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style END fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
 ```
 
 ### DevBox Provisioning Flow
@@ -641,10 +641,10 @@ flowchart TD
     READY --> CONNECT[User Connects]
     CONNECT --> CODE[Start Coding]
     
-    style IMG1 fill:#e8f5e9
-    style IMG2 fill:#e8f5e9
-    style IMG3 fill:#e8f5e9
-    style READY fill:#c8e6c9
+    style IMG1 fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style IMG2 fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style IMG3 fill:#388e3c,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style READY fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
 ```
 
 ## CI/CD Integration
@@ -685,11 +685,11 @@ graph LR
         V --> W[Pools Updated]
     end
     
-    style C fill:#fff4e1
-    style D fill:#fff4e1
-    style M fill:#e1f5ff
-    style N fill:#e1f5ff
-    style W fill:#c8e6c9
+    style C fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style D fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style M fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style N fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style W fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
 ```
 
 ## Summary
