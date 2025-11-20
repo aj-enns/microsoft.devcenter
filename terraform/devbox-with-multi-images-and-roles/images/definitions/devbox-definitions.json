@@ -13,7 +13,7 @@
     {
       "name": "Java-DevBox",
       "imageName": "JavaDevImage",
-      "imageVersion": "1.0.1",
+      "imageVersion": "1.0.3",
       "computeSku": "general_i_8c32gb256ssd_v2",
       "storageType": "ssd_256gb",
       "hibernationSupport": "Disabled",
