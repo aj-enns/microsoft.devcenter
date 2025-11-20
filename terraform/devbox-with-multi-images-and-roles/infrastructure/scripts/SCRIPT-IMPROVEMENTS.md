@@ -189,6 +189,72 @@ Common valid SKUs:
 - ✅ Pre-flight validation before deployment
 - ✅ Links errors to specific definitions/pools
 
+## Debugging Packer Builds
+
+If you encounter image build failures, enable detailed Packer logging using environment variables:
+
+### Enable Logging
+
+**PowerShell:**
+```powershell
+# Enable logging
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "packer.log"
+
+# Run your build
+cd ..\..\images\packer
+.\build-image.ps1 -ImageType java
+
+# Check logs for errors
+Get-Content packer.log | Select-String -Pattern "error|failed|exit code"
+```
+
+**Bash/Linux:**
+```bash
+# Enable logging
+export PACKER_LOG=1
+export PACKER_LOG_PATH="packer.log"
+
+# Run your build
+./build-image.ps1 -ImageType java
+```
+
+### What the Logs Show
+
+The Packer log file contains detailed information about:
+- Azure API calls and responses
+- PowerShell script execution (line by line)
+- WinRM connection details
+- File uploads
+- Exit codes from each provisioner
+- Error messages and stack traces
+
+### Common Issues in Logs
+
+**Exit code 50:** Usually indicates PowerShell syntax errors, often caused by special characters (✓, ⚠) in string interpolation.
+
+**Fix:**
+```powershell
+# ❌ Causes exit code 50
+Write-Host "✓ Success: $variableName"
+
+# ✅ Works correctly  
+Write-Host ('Success: ' + $variableName)
+```
+
+**Exit code 1:** General provisioner failure. Look at the script output in the log to see what command failed.
+
+**WinRM timeout:** Usually network connectivity or VM size issues. Try increasing the VM size.
+
+### Disable Logging
+
+```powershell
+# PowerShell
+$env:PACKER_LOG = "0"
+# or remove entirely
+Remove-Item Env:\PACKER_LOG
+```
+
 ## Troubleshooting
 
 ### "SKU not found" error

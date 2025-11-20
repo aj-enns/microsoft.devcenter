@@ -13,9 +13,9 @@
     {
       "name": "Java-DevBox",
       "imageName": "JavaDevImage",
-      "imageVersion": "1.0.0",
-      "computeSku": "general_i_16c64gb512ssd_v2",
-      "storageType": "ssd",
+      "imageVersion": "1.0.1",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
       "hibernationSupport": "Disabled",
       "team": "java-team",
       "description": "Java development environment with IntelliJ IDEA"

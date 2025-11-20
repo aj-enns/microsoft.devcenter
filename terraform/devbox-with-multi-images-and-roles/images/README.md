@@ -2,41 +2,24 @@
 
 This repository contains Packer templates and DevBox definitions for building team-specific custom images. **Development Teams** own and manage this repository, building customized DevBox images on top of the security baseline provided by Operations.
 
-## 🎯 Architecture Overview
+## 🎯 Quick Overview
 
-This solution demonstrates a **separation of duties** approach where image customization is separated from infrastructure management:
+This repository contains everything you need to build custom DevBox images for your team:
 
 ```
-DevBox Solution Architecture
-├── infrastructure/          # SEPARATE REPOSITORY - Operations Team
-│   ├── terraform/          # Core infrastructure configuration
-│   ├── modules/            # Reusable Terraform modules
-│   ├── scripts/            # Automation scripts
-│   └── policies/           # Compliance and security policies
-│
-└── images/                 # THIS REPOSITORY - Development Teams
-    ├── packer/
-    │   ├── base/          # Operations-controlled base templates (read-only)
-    │   └── teams/         # Team-specific image customizations
-    └── definitions/       # DevBox definitions managed by dev teams
+images/
+├── packer/
+│   ├── base/          # Operations-controlled baseline (read-only)
+│   └── teams/         # Your team's customizations (edit these!)
+└── definitions/       # DevBox configurations (CPU, RAM, storage)
 ```
-
-### Repository Separation Benefits
-
-| Concern | Infrastructure Repo (SEPARATE) | Images Repo (THIS) |
-|---------|-------------------|-------------|
-| **Ownership** | Operations Team | Development Teams |
-| **Controls** | Networks, security, compliance | Software, tools, configurations |
-| **PR Approvals** | @operations-team, @network-team, @security-team | @dev-leads, @team-leads |
-| **Update Frequency** | Quarterly or as needed | Weekly or continuous |
-| **Azure Resources** | DevCenter, Networks, Galleries | Gallery Images, Definitions |
 
 ### How It Works
 
-1. **Operations builds** `SecurityBaselineImage` with mandatory security
-2. **Your team builds** on top of the baseline, adding your tools
-3. **You define** DevBox configurations (CPU, RAM, storage)
-4. **Operations syncs** pools when you update definitions
+1. **You build** custom images with your team's tools (Packer)
+2. **You configure** DevBox specs (CPU, RAM, storage) in definitions file
+3. **You submit** PR with your changes
+4. **Operations deploys** your definitions to Azure DevCenter
 5. **Users provision** Dev Boxes from your custom images
 
 ## 📋 Table of Contents
@@ -47,8 +30,8 @@ DevBox Solution Architecture
 - [💻 Building Custom Images](#-building-custom-images)
 - [📝 Managing Definitions](#-managing-definitions)
 - [🧪 Testing Images](#-testing-images)
-- [🔄 CI/CD Integration](#-cicd-integration)
 - [🐛 Troubleshooting](#-troubleshooting)
+- [📚 Common Software](#-common-software-installations)
 
 ## ✅ Prerequisites
 
@@ -159,25 +142,40 @@ provisioner "powershell" {
 
 # Build image (30-60 minutes)
 .\build-image.ps1 -ImageType vscode
+
+# Optional: Enable logging for troubleshooting
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "vscode-packer.log"
+.\build-image.ps1 -ImageType vscode
 ```
 
-### Step 7: Update Definitions
+### Step 6: Update Definitions
 
-Edit `definitions/devbox-definitions.json`:
+Edit `definitions/devbox-definitions.json` to reference your new image:
 
 ```json
 {
   "definitions": [
     {
       "name": "VSCode-DevBox",
-      "imageDefinition": "VSCodeDevImage",
-      "compute": "general_i_8c32gb256ssd_v2",
-      "storage": "ssd_256gb",
+      "imageName": "VSCodeDevImage",
+      "imageVersion": "1.0.0",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
       "team": "vscode-team",
-      "hibernationSupport": "Enabled"
+      "description": "VS Code with Node.js, Docker"
     }
   ]
 }
+```
+
+### Step 7: Validate Configuration
+
+```powershell
+cd definitions
+# Check JSON syntax and schema
+Get-Content devbox-definitions.json | ConvertFrom-Json
 ```
 
 ### Step 8: Create Pull Request
@@ -185,7 +183,7 @@ Edit `definitions/devbox-definitions.json`:
 1. Commit changes: `git commit -am "Add VS Code DevBox v1.0.0"`
 2. Push to branch: `git push origin feature/vscode-devbox`
 3. Create PR for team lead review
-4. After merge, notify Operations to sync pools
+4. **After merge**: Operations team will deploy your definitions
 
 ## 📁 Repository Structure
 
@@ -386,20 +384,23 @@ Edit `definitions/devbox-definitions.json`:
   "definitions": [
     {
       "name": "VSCode-DevBox",
-      "imageDefinition": "VSCodeDevImage",
-      "compute": "general_i_8c32gb256ssd_v2",
-      "storage": "ssd_256gb",
+      "imageName": "VSCodeDevImage",
+      "imageVersion": "1.0.0",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
       "team": "vscode-team",
-      "autoUpdate": true,
       "description": "VS Code with Node.js, Python, Docker"
     },
     {
-      "name": "IntelliJ-DevBox",
-      "imageDefinition": "IntelliJDevImage",
-      "compute": "general_i_16c64gb512ssd_v2",
-      "storage": "ssd_512gb",
+      "name": "Java-DevBox",
+      "imageName": "JavaDevImage",
+      "imageVersion": "1.0.1",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
       "team": "java-team",
-      "description": "IntelliJ IDEA with Java 17, Maven, Gradle"
+      "description": "Java with OpenJDK, Maven, IntelliJ"
     }
   ],
   "pools": [
@@ -431,7 +432,7 @@ Edit `definitions/devbox-definitions.json`:
 
 ### Pool Configuration
 
-Pools define auto-stop schedules and access:
+Pools define auto-stop schedules and access levels:
 
 ```json
 {
@@ -439,9 +440,9 @@ Pools define auto-stop schedules and access:
     {
       "name": "VSCode-Development-Pool",
       "definitionName": "VSCode-DevBox",
-      "administrator": "Enabled",      // LocalAdministrator access
+      "administrator": "Enabled",
       "schedule": {
-        "time": "17:00",               // Auto-stop at 5 PM
+        "time": "17:00",
         "timeZone": "Eastern Standard Time"
       }
     }
@@ -450,28 +451,22 @@ Pools define auto-stop schedules and access:
 ```
 
 **Administrator Access:**
-- `Enabled`: Users have local admin rights (install software)
+- `Enabled`: Users have local admin rights (can install software)
 - `Disabled`: Standard user access only
 
 **Auto-Stop Schedule:**
-- Saves costs by shutting down Dev Boxes
-- Users can start them again when needed
-- Recommended: After work hours (5 PM, 6 PM, etc.)
+- Saves costs by shutting down Dev Boxes after hours
+- Users can restart them when needed
+- Recommended: After work hours (17:00-18:00)
 
-### Syncing Pools
+### Requesting Deployment
 
 After updating definitions:
 
 1. Commit and push changes
-2. Create PR for review
+2. Create PR for team lead review
 3. Merge to main
-4. **Notify Operations Team** to run sync script:
-   ```powershell
-   # Operations runs this in infrastructure repo
-   .\scripts\04-sync-pools.ps1
-   ```
-
-Or set up CI/CD to trigger automatically (see CI/CD section).
+4. **Operations team will deploy** your updated definitions automatically (or notify them if needed)
 
 ## 🧪 Testing Images
 
@@ -535,149 +530,44 @@ Get-MpComputerStatus
 Get-NetFirewallProfile | Select Name, Enabled
 ```
 
-## 🔄 CI/CD Integration
 
-### GitHub Actions Example
-
-```yaml
-# .github/workflows/build-images.yml
-name: Build DevBox Images
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'packer/teams/**'
-      - 'definitions/**'
-  pull_request:
-    paths:
-      - 'packer/**'
-
-jobs:
-  validate:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        image: [vscode, intellij, dotnet]
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@v2
-      
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      
-      - name: Packer Init
-        working-directory: packer
-        run: packer init teams/${{ matrix.image }}-devbox.pkr.hcl
-      
-      - name: Packer Validate
-        working-directory: packer
-        run: |
-          packer validate `
-            -var-file=teams/${{ matrix.image }}-variables.pkrvars.hcl `
-            teams/${{ matrix.image }}-devbox.pkr.hcl
-
-  build:
-    needs: validate
-    if: github.ref == 'refs/heads/main'
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        image: [vscode]  # Build one at a time to avoid quota issues
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@v2
-      
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      
-      - name: Build Image
-        working-directory: packer
-        run: .\build-image.ps1 -ImageType ${{ matrix.image }}
-      
-      - name: Notify Operations
-        if: success()
-        run: |
-          # Trigger webhook or send notification
-          # Operations will run pool sync
-          echo "Image built successfully - notify ops team"
-
-  notify-ops:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Trigger Pool Sync
-        run: |
-          # Call webhook in operations repo
-          curl -X POST ${{ secrets.OPS_WEBHOOK_URL }} \
-            -H "Authorization: Bearer ${{ secrets.WEBHOOK_TOKEN }}" \
-            -d '{"action": "sync-pools", "repo": "images"}'
-```
-
-### Azure DevOps Pipeline Example
-
-```yaml
-# azure-pipelines.yml
-trigger:
-  branches:
-    include:
-      - main
-  paths:
-    include:
-      - packer/**
-      - definitions/**
-
-pool:
-  vmImage: 'windows-latest'
-
-stages:
-  - stage: Validate
-    jobs:
-      - job: ValidatePacker
-        steps:
-          - task: PackerTool@0
-            inputs:
-              version: 'latest'
-          
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'DevBox-ServiceConnection'
-              scriptType: 'pscore'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                cd packer
-                packer init teams/vscode-devbox.pkr.hcl
-                packer validate -var-file=teams/vscode-variables.pkrvars.hcl teams/vscode-devbox.pkr.hcl
-  
-  - stage: Build
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
-    jobs:
-      - job: BuildImage
-        timeoutInMinutes: 90
-        steps:
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'DevBox-ServiceConnection'
-              scriptType: 'pscore'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                cd packer
-                ./build-image.ps1 -ImageType vscode
-```
 
 ## 🐛 Troubleshooting
+
+### Debugging Packer Builds
+
+**Enable detailed Packer logging:**
+
+```powershell
+# PowerShell - Enable logging
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "packer.log"
+.\build-image.ps1 -ImageType vscode
+
+# View the log
+Get-Content packer.log -Tail 50
+
+# Find errors
+Get-Content packer.log | Select-String -Pattern "error|failed|exit code"
+```
+
+**Common log patterns:**
+- `exit code 50` - PowerShell syntax errors (often special characters like ✓, ⚠)
+- `exit code 1` - Provisioner failure (check command output)
+- `WinRM timeout` - Network or VM size issues
+
+**Prevent build interruptions:**
+
+Packer builds take 30-60 minutes and need continuous connection:
+
+```powershell
+# Disable computer sleep during build
+powercfg /change standby-timeout-ac 0
+.\build-image.ps1 -ImageType vscode
+
+# Re-enable after build completes
+powercfg /change standby-timeout-ac 15
+```
 
 ### Build Issues
 
@@ -687,13 +577,11 @@ stages:
 # Verify Azure CLI login
 az account show
 
-# Check permissions on gallery
-az role assignment list \
-  --assignee <your-user-id> \
-  --scope <gallery-resource-id>
+# Re-authenticate if needed
+az login
 ```
 
-**Solution:** Ensure you have Reader role on the gallery (ask Operations).
+**Solution:** Ensure you're logged into the correct subscription and have gallery access (ask Operations if needed).
 
 **Problem: SecurityBaselineImage not found**
 
@@ -701,33 +589,28 @@ az role assignment list \
 Error: Image 'SecurityBaselineImage' not found in gallery
 ```
 
-**Solution:** Operations team must build the baseline first:
-```powershell
-# Operations runs this
-cd images/packer/base
-.\build-baseline-image.ps1 -ImageVersion "1.0.0"
-```
+**Solution:** Ask Operations team to build the baseline image first, or verify the `baseline_image_version` in your variables file.
 
-**Problem: Build timeout or slow**
+**Problem: Build is slow or times out**
 
 ```hcl
 # Increase VM size in your variables file
 vm_size = "Standard_D4s_v3"  # Faster than D2s_v3
 ```
 
-**Problem: Chocolatey package fails**
+**Problem: Chocolatey package installation fails**
 
 ```powershell
-# Add retry logic in provisioner
+# Add retry logic in your provisioner
 provisioner "powershell" {
   inline = [
     "$maxRetries = 3",
     "for ($i = 0; $i -lt $maxRetries; $i++) {",
     "  try {",
-    "    choco install -y your-package",
+    "    choco install -y nodejs",
     "    break",
     "  } catch {",
-    "    Write-Output 'Retry attempt ' ($i + 1)",
+    "    Write-Host 'Retry ' ($i + 1)",
     "    Start-Sleep -Seconds 10",
     "  }",
     "}"
@@ -735,57 +618,70 @@ provisioner "powershell" {
 }
 ```
 
-### Definition Issues
+**Problem: WSL not working in Dev Box**
 
-**Problem: Pool not created after definition update**
+Ensure your provisioner runs `wsl --update` fully (not silenced with `Out-Null`):
 
 ```powershell
-# Manually sync (ask Operations to run)
-cd infrastructure/scripts
-.\04-sync-pools.ps1 -Verbose
+provisioner "powershell" {
+  inline = [
+    "Write-Host 'Installing WSL 2...'",
+    "wsl --update",
+    "wsl --set-default-version 2",
+    "wsl --install -d Ubuntu --web-download --no-launch",
+    "wsl --version"
+  ]
+}
 ```
+
+### Definition Issues
 
 **Problem: Invalid compute SKU**
 
-Valid SKUs (check with Operations for full list):
-- `general_i_8c32gb256ssd_v2`
-- `general_i_16c64gb512ssd_v2`
-- `general_i_32c128gb1024ssd_v2`
+Check with Operations team for valid SKUs. Common ones:
+- `general_i_8c32gb256ssd_v2` (8 vCPU, 32 GB, 256 GB)
+- `general_i_16c64gb512ssd_v2` (16 vCPU, 64 GB, 512 GB)
+- `general_i_32c128gb1024ssd_v2` (32 vCPU, 128 GB, 1 TB)
 
 **Problem: Image version not found**
 
-Ensure the image version you specified in definition exists:
+Verify the image version exists in the gallery:
+
 ```powershell
 az sig image-version list \
   --gallery-name <gallery> \
   --gallery-image-definition VSCodeDevImage \
-  --resource-group <rg>
+  --resource-group <rg> \
+  --query "[].name" -o table
 ```
 
-### Dev Box Issues
+Ensure `imageVersion` in your definitions file matches a built version.
 
-**Problem: Dev Box stuck in "Creating" state**
-
-Check:
-- Image exists in gallery
-- Network connection is healthy (ask Operations)
-- Quota limits not exceeded
-- Azure Activity Log for errors
-
-**Problem: Can't connect to Dev Box**
-
-- Verify network security group rules
-- Check if you have "DevCenter Dev Box User" role
-- Ensure RDP client is updated
-- Try web-based connection from Dev Portal
+### Testing Your Image
 
 **Problem: Tools not working in Dev Box**
 
 Common causes:
 - Tool wasn't installed during build (check Packer logs)
-- Path environment variable not set
-- Tool requires restart (reboot Dev Box)
-- License activation needed
+- Path environment variable not set correctly
+- Tool requires system restart
+- License activation needed (e.g., Visual Studio, IntelliJ)
+
+**Verification checklist on Dev Box:**
+
+```powershell
+# Check installed tools
+Get-Command node
+Get-Command docker
+Get-Command code
+
+# Verify versions
+node --version
+docker --version
+
+# Check environment variables
+$env:PATH -split ';' | Select-String -Pattern 'nodejs'
+```
 
 ## 📚 Common Software Installations
 
@@ -882,79 +778,88 @@ choco install -y mysql
 
 ## 📚 Additional Resources
 
-### Microsoft Documentation
-- [Microsoft DevCenter Documentation](https://learn.microsoft.com/azure/dev-box/)
-- [Custom Image Requirements](https://learn.microsoft.com/azure/dev-box/how-to-configure-dev-box-azure-image-builder)
-- [Packer Azure Builder](https://www.packer.io/plugins/builders/azure)
-
-### Packer Templates
-- [Packer HCL Reference](https://www.packer.io/docs/templates/hcl_templates)
+### Packer Documentation
+- [Packer HCL Templates](https://www.packer.io/docs/templates/hcl_templates)
 - [Azure ARM Builder](https://www.packer.io/plugins/builders/azure/arm)
-- [Provisioners](https://www.packer.io/docs/provisioners)
-
-### Best Practices
+- [PowerShell Provisioner](https://www.packer.io/docs/provisioners/powershell)
 - [Packer Best Practices](https://www.packer.io/guides/packer-on-cicd)
-- [Image Versioning Guidelines](https://semver.org/)
 
-### Related Repositories
-- **Infrastructure Repository**: Contains Terraform for DevCenter, networks, and galleries
-- Operations team manages core infrastructure there
+### DevBox Documentation
+- [DevBox Custom Images](https://learn.microsoft.com/azure/dev-box/how-to-configure-dev-box-azure-image-builder)
+- [Azure Compute Gallery](https://learn.microsoft.com/azure/virtual-machines/azure-compute-gallery)
+
+### Versioning
+- [Semantic Versioning](https://semver.org/)
 
 ## 🤝 Contributing
 
-### Pull Request Process
-1. Create feature branch from main
-2. Make changes to your team's Packer templates or definitions
-3. Run `.\build-image.ps1 -ImageType <your-image> -ValidateOnly`
-4. Test image build locally
-5. Create PR with description
-6. Required approvals:
-   - Team Lead
-   - (Operations team notified but not required)
-7. Merge to main triggers CI/CD build
+### Pull Request Workflow
 
-### Code Ownership (CODEOWNERS)
+1. **Create feature branch**
+   ```powershell
+   git checkout -b feature/vscode-v1.1.0
+   ```
 
-```
-# Base templates (Operations only)
-/packer/base/ @operations-team
+2. **Make changes** to your team's templates or definitions
+   - Edit `packer/teams/your-team-devbox.pkr.hcl`
+   - Update `definitions/devbox-definitions.json`
 
-# Team templates
-/packer/teams/vscode* @vscode-team-leads
-/packer/teams/intellij* @java-team-leads
-/packer/teams/dotnet* @dotnet-team-leads
+3. **Validate locally**
+   ```powershell
+   cd packer
+   .\build-image.ps1 -ImageType your-team -ValidateOnly
+   ```
 
-# Definitions (Team leads + Operations)
-/definitions/ @dev-leads @operations-team
-```
+4. **Test build** (optional but recommended)
+   ```powershell
+   .\build-image.ps1 -ImageType your-team
+   ```
+
+5. **Create PR** with clear description of changes
+
+6. **Team lead reviews and approves**
+
+7. **Merge to main** - Operations team deploys automatically
 
 ## 🆘 Support
 
-For issues or questions:
-- **Image build issues**: Contact your team lead
-- **Definition/pool issues**: Contact @operations-team
-- **Gallery access issues**: Contact @operations-team
-- **General questions**: Create GitHub issue
+**For help with:**
+- **Packer build errors**: Check troubleshooting section above or contact your team lead
+- **Template questions**: Review examples in `packer/teams/` folder
+- **Gallery access**: Contact Operations team
+- **Definition format**: See JSON examples in this README
 
-## 📞 Getting Started Help
+## 📞 First Time Setup
 
-**First time building an image?**
-1. Get values from Operations team (subscription, gallery name, etc.)
-2. Configure your variables file
-3. Run validation: `.\build-image.ps1 -ImageType <your-team> -ValidateOnly`
-4. If validation passes, build: `.\build-image.ps1 -ImageType <your-team>`
-5. Update definitions and create PR
+**Building your first image?**
 
-**Need baseline image version?**
-Ask Operations team for latest SecurityBaselineImage version:
-```powershell
-# Operations can run:
-az sig image-version list \
-  --gallery-name <gallery> \
-  --gallery-image-definition SecurityBaselineImage \
-  --resource-group <rg> \
-  --query "[0].name"
-```
+1. **Get configuration values** from Operations team:
+   - `subscription_id`
+   - `resource_group_name`
+   - `gallery_name`
+   - `baseline_image_version`
+   - `location`
+
+2. **Create image definition** (one-time setup):
+   ```powershell
+   cd packer/teams
+   .\create-image-definition.ps1 -ImageType vscode -ResourceGroup <rg> -GalleryName <gallery>
+   ```
+
+3. **Configure variables** file with values from step 1
+
+4. **Validate template**:
+   ```powershell
+   cd ..
+   .\build-image.ps1 -ImageType vscode -ValidateOnly
+   ```
+
+5. **Build image**:
+   ```powershell
+   .\build-image.ps1 -ImageType vscode
+   ```
+
+6. **Update definitions** and create PR
 
 ---
 

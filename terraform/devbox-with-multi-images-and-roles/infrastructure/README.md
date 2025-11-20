@@ -965,6 +965,36 @@ az role assignment create \
 
 ### Baseline Image Build Issues
 
+**Debugging Packer Builds**
+
+For detailed troubleshooting of baseline image builds, enable Packer logging:
+
+```powershell
+# Enable detailed logging
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "baseline-packer.log"
+
+# Run baseline image build
+cd ..\images\packer\base
+.\build-baseline-image.ps1 -ImageVersion "1.0.0"
+
+# Check logs for errors
+Get-Content baseline-packer.log | Select-String -Pattern "error|failed|exit code"
+```
+
+**Common log patterns:**
+- `exit code 50` - PowerShell syntax errors (special characters in strings)
+- `exit code 1` - Provisioner script failure
+- WinRM timeout - Network connectivity or VM performance issues
+- Azure API errors - Permission or quota issues
+
+**To disable logging:**
+```powershell
+$env:PACKER_LOG = "0"
+# or
+Remove-Item Env:\PACKER_LOG
+```
+
 **Problem: Packer build fails**
 
 Check:
@@ -972,12 +1002,25 @@ Check:
 - Permissions on gallery (Contributor required)
 - Variables file has correct values
 - Image definition exists (`create-image-definition.ps1`)
+- Review Packer logs (enable with `$env:PACKER_LOG = "1"`)
 
 **Problem: Build timeout**
 
 Increase build VM size in `security-baseline.pkrvars.hcl`:
 ```hcl
 vm_size = "Standard_D4s_v3"  # Faster than D2s_v3
+```
+
+**Problem: PowerShell provisioner exits with code 50**
+
+This usually indicates special characters (like `✓`, `⚠`) in PowerShell string interpolation. Fix by using string concatenation:
+
+```powershell
+# ❌ Causes exit code 50
+Write-Host "✓ Success: $message"
+
+# ✅ Works correctly
+Write-Host ('Success: ' + $message)
 ```
 
 ## 📚 Additional Resources

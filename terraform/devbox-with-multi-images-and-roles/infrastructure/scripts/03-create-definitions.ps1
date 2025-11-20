@@ -16,8 +16,15 @@
     Path to the devbox-definitions.json file
     Default: ../../images/definitions/devbox-definitions.json
 
+.PARAMETER Update
+    Update existing definitions instead of skipping them
+    Useful when updating image versions
+
 .EXAMPLE
     .\03-create-definitions.ps1
+
+.EXAMPLE
+    .\03-create-definitions.ps1 -Update
 
 .EXAMPLE
     .\03-create-definitions.ps1 -DefinitionsPath "..\..\images\definitions\devbox-definitions.json"
@@ -25,7 +32,8 @@
 
 [CmdletBinding()]
 param(
-    [string]$DefinitionsPath = "../../images/definitions/devbox-definitions.json"
+    [string]$DefinitionsPath = "../../images/definitions/devbox-definitions.json",
+    [switch]$Update
 )
 
 $ErrorActionPreference = "Stop"
@@ -165,11 +173,35 @@ foreach ($def in $definitionsFile.definitions) {
     Write-Host "    Storage: $validatedStorage" -ForegroundColor Gray
     
     # Check if definition already exists
-    if ($def.name -in $existingDefNames) {
-        Write-Host "    ⚠️  Definition already exists - skipping" -ForegroundColor Yellow
-        $skipped++
-        Write-Host ""
-        continue
+    $definitionExists = $def.name -in $existingDefNames
+    
+    if ($definitionExists) {
+        # Get the current definition to check its image version
+        Write-Host "    Checking current definition version..." -ForegroundColor Gray
+        $currentDef = az devcenter admin devbox-definition show `
+            --name $def.name `
+            --dev-center-name $devCenterName `
+            --resource-group $resourceGroup `
+            --query "{imageReference: imageReference.id}" 2>&1 | ConvertFrom-Json
+        
+        # Extract version from current definition's image reference
+        # Format: /subscriptions/.../images/ImageName/versions/1.0.0
+        $currentVersion = if ($currentDef.imageReference -match '/versions/(.+)$') { $matches[1] } else { $null }
+        
+        if ($currentVersion -eq $def.imageVersion) {
+            Write-Host "    ⚠️  Definition already at v$($def.imageVersion) - skipping" -ForegroundColor Yellow
+            $skipped++
+            Write-Host ""
+            continue
+        } elseif ($Update) {
+            Write-Host "    Version change detected: v$currentVersion → v$($def.imageVersion)" -ForegroundColor Cyan
+        } else {
+            Write-Host "    ⚠️  Definition exists with v$currentVersion (json has v$($def.imageVersion))" -ForegroundColor Yellow
+            Write-Host "       Use -Update flag to update to new version" -ForegroundColor Gray
+            $skipped++
+            Write-Host ""
+            continue
+        }
     }
     
     # Check if image version exists in DevCenter gallery (CustomImages)
@@ -195,31 +227,55 @@ foreach ($def in $definitionsFile.definitions) {
     $imageId = $imageInfo.id
     Write-Host "    ✓ Image found in DevCenter" -ForegroundColor Green
     
-    # Create the definition
-    Write-Host "    Creating DevBox definition..." -ForegroundColor Cyan
-    
-    try {
-        $result = az devcenter admin devbox-definition create `
-            --name $def.name `
-            --dev-center-name $devCenterName `
-            --resource-group $resourceGroup `
-            --location $location `
-            --image-reference id="$imageId" `
-            --sku name="$($def.computeSku)" `
-            --os-storage-type "$validatedStorage" `
-            --hibernate-support "$($def.hibernationSupport)" 2>&1
+    # Create or update the definition
+    if ($definitionExists) {
+        Write-Host "    Updating DevBox definition to v$($def.imageVersion)..." -ForegroundColor Cyan
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "    ✓ Definition created successfully" -ForegroundColor Green
-            $created++
-        } else {
-            Write-Host "    ✗ Failed to create definition" -ForegroundColor Red
-            Write-Host "      Error: $result" -ForegroundColor Red
+        try {
+            $result = az devcenter admin devbox-definition update `
+                --name $def.name `
+                --dev-center-name $devCenterName `
+                --resource-group $resourceGroup `
+                --image-reference id="$imageId" 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "    ✓ Definition updated successfully" -ForegroundColor Green
+                $created++
+            } else {
+                Write-Host "    ✗ Failed to update definition" -ForegroundColor Red
+                Write-Host "      Error: $result" -ForegroundColor Red
+                $failed++
+            }
+        } catch {
+            Write-Host "    ✗ Exception: $_" -ForegroundColor Red
             $failed++
         }
-    } catch {
-        Write-Host "    ✗ Exception: $_" -ForegroundColor Red
-        $failed++
+    } else {
+        Write-Host "    Creating DevBox definition..." -ForegroundColor Cyan
+        
+        try {
+            $result = az devcenter admin devbox-definition create `
+                --name $def.name `
+                --dev-center-name $devCenterName `
+                --resource-group $resourceGroup `
+                --location $location `
+                --image-reference id="$imageId" `
+                --sku name="$($def.computeSku)" `
+                --os-storage-type "$validatedStorage" `
+                --hibernate-support "$($def.hibernationSupport)" 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "    ✓ Definition created successfully" -ForegroundColor Green
+                $created++
+            } else {
+                Write-Host "    ✗ Failed to create definition" -ForegroundColor Red
+                Write-Host "      Error: $result" -ForegroundColor Red
+                $failed++
+            }
+        } catch {
+            Write-Host "    ✗ Exception: $_" -ForegroundColor Red
+            $failed++
+        }
     }
     
     Write-Host ""

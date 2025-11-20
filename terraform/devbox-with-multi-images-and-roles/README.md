@@ -93,40 +93,67 @@ devbox-with-multi-images-and-roles/
    ```powershell
    cd images/packer
    cp teams/java-variables.pkrvars.hcl.example teams/java-variables.pkrvars.hcl
-   # Edit with your values
+   # Edit with your values (subscription_id, gallery_name, etc.)
+   
+   # Optional: Enable Packer logging for troubleshooting
+   $env:PACKER_LOG = "1"
+   $env:PACKER_LOG_PATH = "java-packer.log"
+   
    .\build-image.ps1 -ImageType java
    ```
 
-2. **Validate and Update Definitions**
-   ```powershell
-   cd ../../infrastructure/scripts
-   
-   # Validate configuration first
-   .\00-validate-definitions.ps1
-   
-   # Auto-fix common issues (storage mismatches)
-   .\00-validate-definitions.ps1 -Fix
-   ```
-
-3. **Update DevBox Definitions**
+2. **Update Image Version in Configuration**
    ```json
    // Edit images/definitions/devbox-definitions.json
    {
      "definitions": [
-       {
-         "name": "VSCode-DevBox",
-         "imageDefinition": "VSCodeDevImage",
-         "compute": "general_i_8c32gb256ssd_v2",
-         "storage": "ssd_256gb",
-         "team": "vscode-team"
-       }
+        {
+          "name": "VSCode-DevBox",
+          "imageName": "VSCodeDevImage",
+          "imageVersion": "1.0.0",
+          "computeSku": "general_i_8c32gb256ssd_v2",
+          "storageType": "ssd_256gb",
+          "hibernationSupport": "Disabled",
+          "team": "vscode-team",
+          "description": "VS Code development environment with Node.js, Python, .NET"
+        },
+        {
+          "name": "Java-DevBox",
+          "imageName": "JavaDevImage",
+          "imageVersion": "1.0.1",
+          "computeSku": "general_i_8c32gb256ssd_v2",
+          "storageType": "ssd_256gb",
+          "hibernationSupport": "Disabled",
+          "team": "java-team",
+          "description": "Java development environment with IntelliJ IDEA"
+        }
      ]
    }
    ```
 
-3. **Create Pull Request**
-   - Operations team runs `04-sync-pools.ps1` to create pools
-   - Or CI/CD automatically syncs pools on merge
+3. **Validate Configuration (Optional but Recommended)**
+   ```powershell
+   cd ../../infrastructure/scripts
+   
+   # Pre-flight validation checks
+   .\00-validate-definitions.ps1
+   
+   # Auto-fix common issues (storage type mismatches)
+   .\00-validate-definitions.ps1 -Fix
+   ```
+
+4. **Update Definitions and Sync Pools**
+   ```powershell
+   # Update existing definitions to new image versions
+   .\03-create-definitions.ps1 -Update
+   
+   # Verify pools are synced (usually no changes needed)
+   .\04-sync-pools.ps1
+   ```
+
+5. **Create Pull Request**
+   - Operations team reviews and merges
+   - Or CI/CD automatically deploys on merge
 
 ## 📁 Repository Structure
 
@@ -147,8 +174,10 @@ infrastructure/
 │       └── main.tf
 │
 ├── scripts/
+│   ├── 00-validate-definitions.ps1    # Pre-flight validation (NEW)
 │   ├── 01-deploy-infrastructure.ps1   # Deploy core infrastructure
 │   ├── 02-attach-networks.ps1         # Configure networks
+│   ├── 03-create-definitions.ps1      # Create/update DevBox definitions
 │   ├── 03-configure-intune.ps1        # Intune configuration (optional)
 │   └── 04-sync-pools.ps1              # Sync pools from definitions
 │
@@ -314,14 +343,39 @@ az role assignment create \
   --scope $GALLERY_ID
 ```
 
-#### Step 6: Ongoing - Sync Pools
+#### Step 6: Ongoing - Manage Definitions and Pools
 
-When development teams add new definitions:
+When development teams update images or definitions:
 
 ```powershell
-# Read definitions from images repo and create pools
-.\scripts\04-sync-pools.ps1
+cd infrastructure/scripts
+
+# Option 1: Validate before deployment (recommended)
+.\00-validate-definitions.ps1
+
+# Option 2: Create new definitions or update existing ones
+.\03-create-definitions.ps1          # Create new definitions only
+.\03-create-definitions.ps1 -Update  # Update existing to new image versions
+
+# Option 3: Sync pools (creates/updates pool configurations)
+.\04-sync-pools.ps1
 ```
+
+**Script Capabilities:**
+
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| `00-validate-definitions.ps1` | Pre-flight checks | Before creating definitions |
+| `00-validate-definitions.ps1 -Fix` | Auto-correct storage mismatches | When validation finds fixable issues |
+| `03-create-definitions.ps1` | Create new definitions | First-time deployment |
+| `03-create-definitions.ps1 -Update` | Update image versions | After building new image version |
+| `04-sync-pools.ps1` | Create/update pools | After definition changes |
+
+**Smart Features:**
+- ✅ Scripts query Azure APIs dynamically (no hardcoded values)
+- ✅ Auto-detect SKU storage requirements and suggest fixes
+- ✅ Only update definitions when version changes detected
+- ✅ Detailed error messages with exact fix commands
 
 Or integrate with CI/CD to run automatically.
 
@@ -470,6 +524,14 @@ provisioner "powershell" {
 ```powershell
 # Full build (30-60 minutes)
 .\build-image.ps1 -ImageType vscode
+
+# Optional: Enable detailed logging for troubleshooting
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "vscode-packer.log"
+.\build-image.ps1 -ImageType vscode
+
+# To disable logging
+$env:PACKER_LOG = "0"
 ```
 
 The build process:
@@ -480,20 +542,51 @@ The build process:
 5. Generalizes (sysprep) the image
 6. Uploads to Azure Compute Gallery
 
+**Troubleshooting Builds:**
+
+If builds fail, enable Packer logging to see detailed execution:
+
+```powershell
+# PowerShell
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "packer.log"
+.\build-image.ps1 -ImageType java
+
+# Check logs for errors
+Get-Content packer.log | Select-String -Pattern "error|failed|exit code"
+```
+
+Common log patterns:
+- **Exit code 50**: PowerShell syntax errors (often special characters like ✓, ⚠)
+- **Exit code 1**: Provisioner failure (check command output in log)
+- **WinRM timeout**: Network or VM size issues
+
+**Preventing Build Interruptions:**
+
+Packer builds take 30-60 minutes. To prevent failures from computer sleep:
+
+```powershell
+# Disable sleep temporarily
+powercfg /change standby-timeout-ac 0
+.\build-image.ps1 -ImageType java
+powercfg /change standby-timeout-ac 15  # Re-enable after
+```
+
 #### Step 5: Update Definitions
 
-Edit `definitions/devbox-definitions.json`:
+Edit `definitions/devbox-definitions.json` to reference your new image version:
 
 ```json
 {
   "definitions": [
     {
       "name": "VSCode-DevBox",
-      "imageDefinition": "VSCodeDevImage",
-      "compute": "general_i_8c32gb256ssd_v2",
-      "storage": "ssd_256gb",
+      "imageName": "VSCodeDevImage",
+      "imageVersion": "1.0.1",  // Increment for each new build
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
       "team": "vscode-team",
-      "autoUpdate": true,
       "description": "VS Code with Node.js, Python, Docker"
     }
   ],
@@ -511,7 +604,40 @@ Edit `definitions/devbox-definitions.json`:
 }
 ```
 
-#### Step 6: Create Pull Request
+**Important Notes:**
+- `imageVersion` must match the version you built with Packer
+- `computeSku` storage size must be compatible with `storageType` (validation script will check)
+- Use `ssd` (generic) for SKUs with specific storage sizes (e.g., `512ssd` in SKU name)
+- Use `ssd_256gb`, `ssd_512gb` for SKUs without storage in the name
+
+**Validate Configuration:**
+
+```powershell
+cd ../../infrastructure/scripts
+
+# Check for issues before deployment
+.\00-validate-definitions.ps1
+
+# Auto-fix storage type mismatches
+.\00-validate-definitions.ps1 -Fix
+```
+
+#### Step 6: Deploy Definition Update
+
+```powershell
+# Update existing definition to new image version
+.\03-create-definitions.ps1 -Update
+```
+
+The script will:
+- ✅ Detect that VSCode-DevBox exists with v1.0.0
+- ✅ See that definitions file specifies v1.0.1  
+- ✅ Update the definition to use the new image
+- ⏭️ Skip definitions already at the correct version
+
+Pools automatically reference the updated definition - no pool changes needed.
+
+#### Step 7: Create Pull Request
 
 1. Commit changes to branch
 2. Create PR
@@ -534,7 +660,40 @@ Edit `definitions/devbox-definitions.json`:
 - `1.1.0` - Minor (new tools, non-breaking changes)
 - `2.0.0` - Major (breaking changes, major upgrades)
 
-Update `image_version` in your variables file for each build.
+**Update Workflow:**
+
+1. **Increment version in Packer variables:**
+   ```hcl
+   // teams/java-variables.pkrvars.hcl
+   image_version = "1.0.1"  // Was 1.0.0
+   ```
+
+2. **Build new image:**
+   ```powershell
+   .\build-image.ps1 -ImageType java
+   ```
+
+3. **Update definitions file:**
+   ```json
+   // definitions/devbox-definitions.json
+   {
+     "name": "Java-DevBox",
+     "imageName": "JavaDevImage",
+     "imageVersion": "1.0.1"  // Match Packer version
+   }
+   ```
+
+4. **Deploy update:**
+   ```powershell
+   cd ../../infrastructure/scripts
+   .\03-create-definitions.ps1 -Update  // Updates to new version
+   ```
+
+**Version Tracking:**
+- Packer builds image with version → Gallery image tagged
+- Definitions file references that version
+- Scripts only update when versions differ
+- Users get new image on next Dev Box provision
 
 ### Testing Images
 
@@ -908,6 +1067,47 @@ az role assignment list \
   --scope <gallery-resource-id>
 ```
 
+**Problem: Build fails with exit code 50**
+```powershell
+# Enable Packer logging to see details
+$env:PACKER_LOG = "1"
+$env:PACKER_LOG_PATH = "packer.log"
+.\build-image.ps1 -ImageType java
+
+# Check logs for PowerShell syntax errors
+Get-Content packer.log | Select-String -Pattern "exit code 50"
+
+# Common cause: Special characters (✓, ⚠) in string interpolation
+# Fix: Use string concatenation instead
+# ❌ Write-Host "✓ Success: $variable"
+# ✅ Write-Host ('Success: ' + $variable)
+```
+
+**Problem: Build interrupted (computer went to sleep)**
+```powershell
+# Packer builds take 30-60 minutes and need continuous connection
+# Prevent sleep during build:
+powercfg /change standby-timeout-ac 0  # Disable sleep on AC
+.\build-image.ps1 -ImageType java
+powercfg /change standby-timeout-ac 15  # Re-enable after
+
+# Cleanup abandoned build resources
+az group list --query "[?starts_with(name, 'pkr-Resource-Group')].name" -o tsv
+az group delete --name <resource-group-name> --yes --no-wait
+```
+
+**Problem: WSL not fully installed in image**
+```powershell
+# Recent fix: Ensure wsl --update runs during build
+# Check provisioner includes:
+# wsl --update
+# wsl --set-default-version 2
+# wsl --install -d Ubuntu --web-download --no-launch
+
+# Verify in log:
+Get-Content packer.log | Select-String -Pattern "wsl --update|wsl --version"
+```
+
 **Problem: Base provisioners missing compliance**
 ```powershell
 # Review build logs for compliance check output
@@ -951,13 +1151,60 @@ provisioner "powershell" {
 }
 ```
 
-### Pool Sync Issues
+### Definition and Pool Sync Issues
+
+**Problem: Image version not updating in portal**
+```powershell
+# You need to UPDATE the definition, not just sync pools
+# Pools show whatever version the definition references
+
+cd infrastructure/scripts
+
+# Update definition to new image version
+.\03-create-definitions.ps1 -Update
+
+# Pool automatically uses updated definition
+```
+
+**Problem: Can't delete definition (pool dependency)**
+```powershell
+# Must delete pool first, then definition
+az devcenter admin pool delete \
+  --name Java-Development-Pool \
+  --project-name <project> \
+  --resource-group <rg>
+
+az devcenter admin devbox-definition delete \
+  --name Java-DevBox \
+  --dev-center-name <devcenter> \
+  --resource-group <rg>
+
+# Then recreate both
+.\03-create-definitions.ps1
+.\04-sync-pools.ps1
+```
+
+**Problem: SKU validation errors**
+```powershell
+# Use validation script to check before deployment
+.\00-validate-definitions.ps1
+
+# Common issues:
+# - Storage type doesn't match SKU requirements
+# - SKU name not found in Azure
+
+# Auto-fix storage mismatches
+.\00-validate-definitions.ps1 -Fix
+
+# List valid SKUs
+az devcenter admin sku list --query '[].name' -o table
+```
 
 **Problem: Pools not creating automatically**
 ```powershell
 # Manually run sync script
 cd infrastructure/scripts
-./04-sync-pools.ps1 -Verbose
+.\04-sync-pools.ps1 -Verbose
 
 # Check if definitions file is readable
 Test-Path ../../images/definitions/devbox-definitions.json
@@ -969,8 +1216,10 @@ az devcenter admin devbox-definition list \
 ```
 
 **Problem: Definition not found in DevCenter**
-```
-# Definition must be created first via Packer build
+```powershell
+# Definition must be created first
+.\03-create-definitions.ps1
+
 # Or create manually:
 az devcenter admin devbox-definition create \
   --dev-center-name <devcenter> \

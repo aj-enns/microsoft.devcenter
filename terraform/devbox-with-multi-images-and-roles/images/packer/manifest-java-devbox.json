@@ -18,7 +18,26 @@
         "team_name": "Java Dev Team",
         "wsl_version": "WSL 2 with Ubuntu"
       }
+    },
+    {
+      "name": "javadev_customization",
+      "builder_type": "azure-arm",
+      "build_time": 1763642188,
+      "files": null,
+      "artifact_id": "/subscriptions/1b2c6be0-ed07-4512-b69c-8c080c09c608/resourceGroups/rg-devbox-multi-roles/providers/Microsoft.Compute/galleries/galxvqypooxvqja4/images/JavaDevImage/versions/1.0.1",
+      "packer_run_uuid": "223f5e3c-02df-140b-a9cc-270010179ebb",
+      "custom_data": {
+        "baseline_image": "SecurityBaselineImage",
+        "baseline_version": "1.0.0",
+        "build_time": "2025-11-20T12:36:28Z",
+        "description": "Java development image with JDK 11/17/21, Maven, Gradle, IntelliJ, Eclipse, VS Code, WSL 2, and Ubuntu",
+        "image_name": "JavaDevImage",
+        "image_version": "1.0.1",
+        "java_versions": "OpenJDK 11, 17, 21 (LTS)",
+        "team_name": "Java Dev Team",
+        "wsl_version": "WSL 2 with Ubuntu"
+      }
     }
   ],
-  "last_run_uuid": "ade54e3f-4b73-ab3c-640a-3067d8b35812"
+  "last_run_uuid": "223f5e3c-02df-140b-a9cc-270010179ebb"
 }
