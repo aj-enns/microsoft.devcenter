@@ -1,0 +1,20 @@
+# Infrastructure Repository Code Owners
+# This file defines code ownership for the infrastructure components
+# Operations Team has ownership and approval rights for all infrastructure
+
+# Global ownership - Operations Team owns all infrastructure by default
+* @operations-team
+
+# Network configurations - Network Team and Operations Team
+/terraform/network*.tf @network-team @operations-team
+/variables.tf @operations-team
+
+# Security and compliance - Security Team and Operations Team  
+/policies/ @security-team @operations-team
+/scripts/*intune* @security-team @operations-team
+
+# Terraform modules - Operations Team only
+/modules/ @operations-team
+
+# Scripts that modify infrastructure - Operations Team only
+/scripts/ @operations-team

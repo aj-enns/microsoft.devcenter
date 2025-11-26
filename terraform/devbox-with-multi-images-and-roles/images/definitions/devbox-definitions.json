@@ -1,0 +1,63 @@
+{
+  "definitions": [
+    {
+      "name": "VSCode-DevBox",
+      "imageName": "VSCodeDevImage",
+      "imageVersion": "1.0.0",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
+      "team": "vscode-team",
+      "description": "VS Code development environment with Node.js, Python, .NET"
+    },
+    {
+      "name": "Java-DevBox",
+      "imageName": "JavaDevImage",
+      "imageVersion": "1.0.3",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
+      "team": "java-team",
+      "description": "Java development environment with IntelliJ IDEA"
+    },
+    {
+      "name": "DotNet-DevBox",
+      "imageName": "DotNetDevImage",
+      "imageVersion": "1.0.0",
+      "computeSku": "general_i_8c32gb256ssd_v2",
+      "storageType": "ssd_256gb",
+      "hibernationSupport": "Disabled",
+      "team": "dotnet-team",
+      "description": ".NET development environment with Visual Studio 2022"
+    }
+  ],
+  "pools": [
+    {
+      "name": "VSCode-Development-Pool",
+      "definitionName": "VSCode-DevBox",
+      "administrator": "Enabled",
+      "schedule": {
+        "time": "16:00",
+        "timeZone": "Eastern Standard Time"
+      }
+    },
+    {
+      "name": "Java-Development-Pool",
+      "definitionName": "Java-DevBox",
+      "administrator": "Enabled",
+      "schedule": {
+        "time": "16:00",
+        "timeZone": "Eastern Standard Time"
+      }
+    },
+    {
+      "name": "DotNet-Development-Pool",
+      "definitionName": "DotNet-DevBox",
+      "administrator": "Enabled",
+      "schedule": {
+        "time": "16:00",
+        "timeZone": "Eastern Standard Time"
+      }
+    }
+  ]
+}

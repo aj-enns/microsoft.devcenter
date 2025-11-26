@@ -1,0 +1,31 @@
+# Example terraform.tfvars file for Infrastructure
+# Managed by Operations Team
+# Copy this file to terraform.tfvars and update with your specific values
+
+resource_group_name  = "rg-devbox-multi-roles"
+user_principal_id    = "your-user-or-service-principal-id"
+user_principal_type  = "User" # or "ServicePrincipal" or "Group"
+location            = "eastus"
+suffix              = "default"
+
+# Optional: Override default resource names
+# devcenter_name           = "dc-devbox-test"
+# project_name             = "dcprj-devbox-test"
+# network_connection_name  = "con-devbox-test"
+# user_identity_name       = "id-devbox-test"
+# network_vnet_name        = "vnet-devbox-test"
+# network_subnet_name      = "snet-devbox-test"
+# gallery_name             = "galdevbox"
+
+# Optional: Override default network settings
+# network_vnet_address_prefixes   = "10.4.0.0/16"
+# network_subnet_address_prefixes = "10.4.0.0/24"
+
+# Optional: Network configuration
+# enable_nat_gateway = true  # Default: true. Provides outbound connectivity required for DevCenter health checks
+
+# Optional: Use existing subnet
+# existing_subnet_id = "/subscriptions/your-subscription-id/resourceGroups/your-rg/providers/Microsoft.Network/virtualNetworks/your-vnet/subnets/your-subnet"
+
+# Optional: Max dev boxes per user
+# max_dev_boxes_per_user = 10
