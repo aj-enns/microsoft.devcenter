@@ -1,0 +1,112 @@
+# Azure DevOps Pipeline for Terraform Infrastructure
+# This pipeline tracks infrastructure changes and notifies about TFE workspace runs
+# TFE workspace should be configured with VCS connection to auto-trigger on changes
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - terraform/devbox-with-multi-images-and-roles/infrastructure/**
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - terraform/devbox-with-multi-images-and-roles/infrastructure/**
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: terraform-enterprise-config  # Contains TFE_ORG, TFE_WORKSPACE, TFE_TOKEN
+
+stages:
+  - stage: Validate
+    displayName: 'Validate Terraform Configuration'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: TerraformValidate
+        displayName: 'Terraform Format & Validate'
+        steps:
+          - checkout: self
+          
+          - task: TerraformInstaller@0
+            inputs:
+              terraformVersion: 'latest'
+            displayName: 'Install Terraform'
+          
+          - bash: |
+              cd terraform/devbox-with-multi-images-and-roles/infrastructure
+              
+              echo "=========================================="
+              echo "Checking Terraform Formatting"
+              echo "=========================================="
+              terraform fmt -check -recursive
+              
+              echo ""
+              echo "=========================================="
+              echo "Initializing Terraform"
+              echo "=========================================="
+              terraform init -backend=false
+              
+              echo ""
+              echo "=========================================="
+              echo "Validating Terraform Configuration"
+              echo "=========================================="
+              terraform validate
+            displayName: 'Terraform Format Check & Validate'
+            env:
+              TF_TOKEN_app_terraform_io: $(TFE_TOKEN)
+
+  - stage: Notify_TFE
+    displayName: 'TFE Workspace Notification'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: TFE_Info
+        displayName: 'TFE Workspace Information'
+        steps:
+          - bash: |
+              echo "=========================================="
+              echo "Terraform Enterprise Workspace"
+              echo "=========================================="
+              echo ""
+              echo "Organization: $(TFE_ORG)"
+              echo "Workspace:    $(TFE_WORKSPACE)"
+              echo ""
+              echo "TFE workspace is configured with VCS integration and will"
+              echo "automatically trigger a run for this commit."
+              echo ""
+              echo "Monitor the run at:"
+              echo "https://app.terraform.io/app/$(TFE_ORG)/workspaces/$(TFE_WORKSPACE)"
+              echo ""
+              echo "=========================================="
+            displayName: 'TFE Auto-Triggered via VCS'
+          
+          - bash: |
+              # Optional: Query TFE API to find the triggered run
+              if [ -n "$(TFE_TOKEN)" ]; then
+                echo "Querying TFE API for recent runs..."
+                
+                WORKSPACE_ID=$(curl -s \
+                  --header "Authorization: Bearer $(TFE_TOKEN)" \
+                  --header "Content-Type: application/vnd.api+json" \
+                  "https://app.terraform.io/api/v2/organizations/$(TFE_ORG)/workspaces/$(TFE_WORKSPACE)" \
+                  | jq -r '.data.id')
+                
+                echo "Workspace ID: $WORKSPACE_ID"
+                
+                # Get latest run
+                curl -s \
+                  --header "Authorization: Bearer $(TFE_TOKEN)" \
+                  --header "Content-Type: application/vnd.api+json" \
+                  "https://app.terraform.io/api/v2/workspaces/$WORKSPACE_ID/runs?page%5Bsize%5D=1" \
+                  | jq '.data[0] | {id: .id, status: .attributes.status, message: .attributes.message}'
+              else
+                echo "TFE_TOKEN not configured - skipping API query"
+              fi
+            displayName: 'Query TFE Run Status (Optional)'
+            condition: succeededOrFailed()
