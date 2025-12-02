@@ -1,0 +1,250 @@
+# Azure DevOps Pipeline for Baseline Image Build
+# Repository: microsoft.devcenter-infrastructure (Operations Repository)
+# This pipeline builds the security baseline image that all team images are based on
+
+trigger: none  # Manual trigger only
+
+pr: none
+
+pool:
+  vmImage: 'windows-latest'
+
+parameters:
+  - name: imageVersion
+    displayName: 'Baseline Image Version'
+    type: string
+    default: '2024.12.001'
+  - name: notifyTeams
+    displayName: 'Notify development teams after build'
+    type: boolean
+    default: true
+
+variables:
+  - group: devbox-infrastructure-credentials  # SP with full infrastructure access
+
+stages:
+  - stage: ValidateBaseline
+    displayName: 'Validate Baseline Template'
+    jobs:
+      - job: ValidateTemplate
+        displayName: 'Validate Packer Template'
+        steps:
+          - checkout: self
+          
+          - task: PackerInstaller@1
+            inputs:
+              version: 'latest'
+            displayName: 'Install Packer'
+          
+          - pwsh: |
+              Write-Host "Validating baseline Packer template..."
+              
+              Set-Location "images/packer/base"
+              
+              packer init security-baseline.pkr.hcl
+              packer validate -syntax-only security-baseline.pkr.hcl
+              
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Packer validation failed"
+                exit 1
+              }
+              
+              Write-Host "✓ Packer template validated" -ForegroundColor Green
+            displayName: 'Validate Packer Template'
+
+  - stage: BuildBaseline
+    displayName: 'Build Security Baseline Image'
+    dependsOn: ValidateBaseline
+    condition: succeeded()
+    jobs:
+      - job: BuildBaselineImage
+        displayName: 'Build Baseline with Packer'
+        timeoutInMinutes: 90
+        steps:
+          - checkout: self
+          
+          - task: PackerInstaller@1
+            inputs:
+              version: 'latest'
+            displayName: 'Install Packer'
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Infrastructure-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "Building Security Baseline Image"
+                Write-Host "=========================================="
+                Write-Host ""
+                Write-Host "Version: ${{ parameters.imageVersion }}"
+                Write-Host "Build ID: $(Build.BuildId)"
+                Write-Host ""
+                
+                # Read Terraform outputs for gallery info
+                Set-Location "$(Build.SourcesDirectory)/terraform"
+                $outputs = terraform output -json | ConvertFrom-Json
+                
+                $galleryName = $outputs.gallery_name.value
+                $galleryRG = $outputs.gallery_resource_group.value
+                $region = $outputs.location.value
+                
+                Write-Host "Target Gallery: $galleryName" -ForegroundColor Cyan
+                Write-Host "Resource Group: $galleryRG" -ForegroundColor Cyan
+                Write-Host "Region: $region" -ForegroundColor Cyan
+                Write-Host ""
+                
+                # Build baseline image
+                Set-Location "$(Build.SourcesDirectory)/images/packer/base"
+                
+                Write-Host "Initializing Packer..." -ForegroundColor Cyan
+                packer init security-baseline.pkr.hcl
+                
+                Write-Host "Building baseline image..." -ForegroundColor Cyan
+                packer build `
+                  -var "subscription_id=$env:ARM_SUBSCRIPTION_ID" `
+                  -var "client_id=$env:ARM_CLIENT_ID" `
+                  -var "client_secret=$env:ARM_CLIENT_SECRET" `
+                  -var "tenant_id=$env:ARM_TENANT_ID" `
+                  -var "gallery_name=$galleryName" `
+                  -var "gallery_resource_group=$galleryRG" `
+                  -var "location=$region" `
+                  -var "image_version=${{ parameters.imageVersion }}" `
+                  -var "build_id=$(Build.BuildId)" `
+                  security-baseline.pkr.hcl
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Baseline image build failed"
+                  exit 1
+                }
+                
+                Write-Host ""
+                Write-Host "✓ Security baseline image built successfully" -ForegroundColor Green
+            displayName: 'Build Baseline Image'
+            env:
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+  - stage: PublishManifest
+    displayName: 'Publish Baseline Manifest'
+    dependsOn: BuildBaseline
+    condition: succeeded()
+    jobs:
+      - job: CreateManifest
+        displayName: 'Create and Publish Manifest'
+        steps:
+          - checkout: self
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Infrastructure-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Creating baseline image manifest..."
+                
+                # Read Terraform outputs
+                Set-Location "$(Build.SourcesDirectory)/terraform"
+                $outputs = terraform output -json | ConvertFrom-Json
+                
+                $manifest = @{
+                  galleryName = $outputs.gallery_name.value
+                  galleryResourceGroup = $outputs.gallery_resource_group.value
+                  baselineImageName = "SecurityBaselineImage"
+                  latestVersion = "${{ parameters.imageVersion }}"
+                  publishedDate = (Get-Date -Format "o")
+                  buildId = "$(Build.BuildId)"
+                  buildNumber = "$(Build.BuildNumber)"
+                  repository = "microsoft.devcenter-infrastructure"
+                  source = @{
+                    branch = "$(Build.SourceBranch)"
+                    commit = "$(Build.SourceVersion)"
+                  }
+                }
+                
+                $manifestJson = $manifest | ConvertTo-Json -Depth 10
+                $manifestJson | Out-File "$(Build.ArtifactStagingDirectory)/baseline-image-manifest.json"
+                
+                Write-Host "Manifest created:"
+                Write-Host $manifestJson
+                
+                Write-Host ""
+                Write-Host "✓ Manifest ready for publishing" -ForegroundColor Green
+            displayName: 'Generate Manifest'
+          
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'baseline-manifest'
+            displayName: 'Publish Manifest Artifact'
+          
+          # Optional: Publish to Azure Storage for dev teams to reference
+          - task: AzureCLI@2
+            condition: eq('${{ parameters.notifyTeams }}', true)
+            inputs:
+              azureSubscription: 'DevBox-Infrastructure-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Publishing manifest to shared storage..."
+                
+                # Upload to Azure Storage (create storage account if needed)
+                $storageAccount = "stdevboxmanifests"
+                $container = "baseline-images"
+                
+                az storage blob upload `
+                  --account-name $storageAccount `
+                  --container-name $container `
+                  --name "baseline-image-manifest.json" `
+                  --file "$(Build.ArtifactStagingDirectory)/baseline-image-manifest.json" `
+                  --overwrite
+                
+                Write-Host "✓ Manifest published to Azure Storage" -ForegroundColor Green
+            displayName: 'Upload Manifest to Storage'
+
+  - stage: NotifyTeams
+    displayName: 'Notify Development Teams'
+    dependsOn: PublishManifest
+    condition: and(succeeded(), eq('${{ parameters.notifyTeams }}', true))
+    jobs:
+      - job: SendNotification
+        displayName: 'Send Team Notifications'
+        steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Infrastructure-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "New Baseline Image Available"
+                Write-Host "=========================================="
+                Write-Host ""
+                Write-Host "Version: ${{ parameters.imageVersion }}"
+                Write-Host "Build: $(Build.BuildNumber)"
+                Write-Host "Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                Write-Host ""
+                Write-Host "Development teams can now rebuild their images"
+                Write-Host "using the new security baseline."
+                Write-Host ""
+                Write-Host "Image Name: SecurityBaselineImage"
+                Write-Host "Version: ${{ parameters.imageVersion }}"
+                Write-Host ""
+                Write-Host "Next steps for dev teams:"
+                Write-Host "  1. Update devbox-definitions.json if needed"
+                Write-Host "  2. Trigger build-team-images.yml pipeline"
+                Write-Host "  3. Test new images in dev environment"
+                Write-Host ""
+                
+                # TODO: Integrate with Slack, Teams, or email notifications
+                # Example: Send to Slack webhook
+                # $slackWebhook = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+                # $message = @{
+                #   text = "New baseline image available: v${{ parameters.imageVersion }}"
+                #   channel = "#devbox-announcements"
+                # }
+                # Invoke-RestMethod -Uri $slackWebhook -Method Post -Body ($message | ConvertTo-Json)
+            displayName: 'Display Notification'

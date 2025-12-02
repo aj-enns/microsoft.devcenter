@@ -1,91 +1,59 @@
 # Terraform
-*.tfstate
-*.tfstate.*
-*.tfvars
-!*.tfvars.example
-.terraform/
-crash.log
-crash.*.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
-create-pools.ps1
-cleanup-devboxes.ps1
-
-# Note: .terraform.lock.hcl SHOULD be committed to version control
-# It ensures consistent provider versions across environments
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/terraform.tfvars
+**/.terraform.tfstate.lock.info
+**/tfplan
+**/crash.log
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
 
 # Packer
-packer_cache/
-*.box
-packer-build.log
-*.pkrvars.hcl
-!*.pkrvars.hcl.example
+**/packer_cache/
+**/.packer.d/
+**/packer-manifest.json
+**/*.box
+**/*variables.pkrvars.hcl
+!**/*variables.pkrvars.hcl.example
 
 # Azure
-*.publishsettings
-.azure/
-
-# Credentials and Secrets
-*.pem
-*.key
-*.cer
-*.pfx
-secrets/
-credentials/
-.env
-.env.local
-
-# IDE and Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# GitHub workflows and settings (keeping local only)
-.github/
-
-# Build artifacts
-bin/
-obj/
-dist/
-build/
-out/
+**/.azure/
 
 # Logs
-*.log
-logs/
-*.tmp
+**/*.log
+**/logs/
+**/*.log.*
 
-# OS Files
-.DS_Store
-Thumbs.db
-desktop.ini
+# Sensitive files
+**/secrets/
+**/credentials/
+**/.env
+**/.env.local
 
-# PowerShell
-*.ps1.bak
+# OS files
+**/.DS_Store
+**/Thumbs.db
+**/*.swp
+**/*.swo
+**/*~
+
+# IDE
+**/.vscode/
+**/.idea/
+**/*.code-workspace
+
+# Generated scripts
+**/create-pools.ps1
+
+# Backup files
+**/*.bak
+**/*.backup
+**/*.old
 
 # Temporary files
-temp/
-tmp/
-*.tmp
-*.bak
-*.backup
-
-# Node modules (if using any Node tooling)
-node_modules/
-
-# Python (if using any Python tooling)
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-venv/
-ENV/
-env/
+**/temp/
+**/tmp/

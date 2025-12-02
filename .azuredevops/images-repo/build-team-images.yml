@@ -1,0 +1,312 @@
+# Azure DevOps Pipeline for Team Image Builds
+# Repository: microsoft.devcenter-images (Developer Repository)
+# This pipeline builds team-specific DevBox images
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - packer/teams/**
+      - definitions/devbox-definitions.json
+
+pr: none
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  - group: devbox-images-credentials  # SP with gallery access only
+  - group: devbox-infrastructure-config  # Gallery/DevCenter names
+  - name: imageVersion
+    value: '$(Build.BuildNumber)'
+
+stages:
+  - stage: ValidateInfrastructureAccess
+    displayName: 'Validate Infrastructure Access'
+    jobs:
+      - job: CheckGalleryAccess
+        displayName: 'Verify Gallery Access'
+        steps:
+          - checkout: self
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Images-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "Validating Infrastructure Configuration"
+                Write-Host "=========================================="
+                Write-Host ""
+                
+                # Read infrastructure config
+                $config = Get-Content "config/infrastructure-config.json" | ConvertFrom-Json
+                $env = $config.environments.prod
+                
+                Write-Host "Target Environment: Production" -ForegroundColor Cyan
+                Write-Host "  Gallery Name: $($env.galleryName)" -ForegroundColor Gray
+                Write-Host "  Gallery RG: $($env.galleryResourceGroup)" -ForegroundColor Gray
+                Write-Host "  DevCenter: $($env.devCenterName)" -ForegroundColor Gray
+                Write-Host "  Region: $($env.region)" -ForegroundColor Gray
+                Write-Host ""
+                
+                # Verify gallery exists and we have access
+                Write-Host "Verifying gallery access..." -ForegroundColor Cyan
+                $gallery = az sig show `
+                  --resource-group $env.galleryResourceGroup `
+                  --gallery-name $env.galleryName `
+                  --query "{name: name, location: location}" 2>&1
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Cannot access gallery. Check service principal permissions."
+                  Write-Host "Gallery: $($env.galleryName)" -ForegroundColor Red
+                  Write-Host "Resource Group: $($env.galleryResourceGroup)" -ForegroundColor Red
+                  exit 1
+                }
+                
+                $galleryInfo = $gallery | ConvertFrom-Json
+                Write-Host "✓ Gallery access confirmed" -ForegroundColor Green
+                Write-Host "  Location: $($galleryInfo.location)" -ForegroundColor Gray
+                Write-Host ""
+                
+                # Check for baseline image
+                Write-Host "Checking for baseline image..." -ForegroundColor Cyan
+                $baseline = az sig image-definition show `
+                  --resource-group $env.galleryResourceGroup `
+                  --gallery-name $env.galleryName `
+                  --gallery-image-definition $env.baselineImageName `
+                  --query "name" -o tsv 2>&1
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Baseline image not found: $($env.baselineImageName)"
+                  Write-Host "Infrastructure team must build baseline first." -ForegroundColor Yellow
+                  exit 1
+                }
+                
+                Write-Host "✓ Baseline image found: $baseline" -ForegroundColor Green
+                Write-Host ""
+                Write-Host "Ready to build team images" -ForegroundColor Green
+            displayName: 'Validate Infrastructure Access'
+
+  - stage: BuildTeamImages
+    displayName: 'Build Team-Specific Images'
+    dependsOn: ValidateInfrastructureAccess
+    condition: succeeded()
+    jobs:
+      - job: DetermineChangedImages
+        displayName: 'Detect Changed Images'
+        steps:
+          - checkout: self
+            fetchDepth: 2
+          
+          - pwsh: |
+              Write-Host "Detecting which images need to be rebuilt..."
+              
+              # Get changed files in last commit
+              $changedFiles = git diff --name-only HEAD~1 HEAD
+              
+              $buildVSCode = $false
+              $buildJava = $false
+              $buildDotNet = $false
+              $buildDataScience = $false
+              
+              foreach ($file in $changedFiles) {
+                if ($file -match "packer/teams/vscode") { $buildVSCode = $true }
+                if ($file -match "packer/teams/java") { $buildJava = $true }
+                if ($file -match "packer/teams/dotnet") { $buildDotNet = $true }
+                if ($file -match "packer/teams/datascience") { $buildDataScience = $true }
+                if ($file -match "definitions/devbox-definitions.json") {
+                  # If definitions changed, rebuild all
+                  $buildVSCode = $true
+                  $buildJava = $true
+                  $buildDotNet = $true
+                  $buildDataScience = $true
+                }
+              }
+              
+              Write-Host "Images to build:"
+              Write-Host "  VSCode: $buildVSCode"
+              Write-Host "  Java: $buildJava"
+              Write-Host "  .NET: $buildDotNet"
+              Write-Host "  DataScience: $buildDataScience"
+              
+              # Set output variables
+              Write-Host "##vso[task.setvariable variable=buildVSCode;isOutput=true]$buildVSCode"
+              Write-Host "##vso[task.setvariable variable=buildJava;isOutput=true]$buildJava"
+              Write-Host "##vso[task.setvariable variable=buildDotNet;isOutput=true]$buildDotNet"
+              Write-Host "##vso[task.setvariable variable=buildDataScience;isOutput=true]$buildDataScience"
+            name: detectChanges
+            displayName: 'Detect Changed Images'
+      
+      - job: BuildImages
+        displayName: 'Build Team Images'
+        dependsOn: DetermineChangedImages
+        strategy:
+          matrix:
+            VSCode:
+              imageType: 'vscode'
+              imageFile: 'vscode-devbox.pkr.hcl'
+              shouldBuild: $[ dependencies.DetermineChangedImages.outputs['detectChanges.buildVSCode'] ]
+            Java:
+              imageType: 'java'
+              imageFile: 'java-devbox.pkr.hcl'
+              shouldBuild: $[ dependencies.DetermineChangedImages.outputs['detectChanges.buildJava'] ]
+            DotNet:
+              imageType: 'dotnet'
+              imageFile: 'dotnet-devbox.pkr.hcl'
+              shouldBuild: $[ dependencies.DetermineChangedImages.outputs['detectChanges.buildDotNet'] ]
+            DataScience:
+              imageType: 'datascience'
+              imageFile: 'datascience-devbox.pkr.hcl'
+              shouldBuild: $[ dependencies.DetermineChangedImages.outputs['detectChanges.buildDataScience'] ]
+        condition: eq(variables['shouldBuild'], 'true')
+        timeoutInMinutes: 120
+        steps:
+          - checkout: self
+          
+          - task: PackerInstaller@1
+            inputs:
+              version: 'latest'
+            displayName: 'Install Packer'
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Images-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "Building $(imageType) DevBox Image"
+                Write-Host "=========================================="
+                Write-Host ""
+                
+                # Read infrastructure config
+                $config = Get-Content "$(Build.SourcesDirectory)/config/infrastructure-config.json" | ConvertFrom-Json
+                $env = $config.environments.prod
+                
+                Write-Host "Image Type: $(imageType)" -ForegroundColor Cyan
+                Write-Host "Image Version: $(imageVersion)" -ForegroundColor Cyan
+                Write-Host "Gallery: $($env.galleryName)" -ForegroundColor Gray
+                Write-Host "Baseline: $($env.baselineImageName)" -ForegroundColor Gray
+                Write-Host ""
+                
+                # Set working directory
+                Set-Location "$(Build.SourcesDirectory)/packer/teams"
+                
+                # Initialize Packer
+                Write-Host "Initializing Packer..." -ForegroundColor Cyan
+                packer init $(imageFile)
+                
+                # Build the team image
+                Write-Host "Building $(imageType) image..." -ForegroundColor Cyan
+                packer build `
+                  -var "subscription_id=$env:ARM_SUBSCRIPTION_ID" `
+                  -var "client_id=$env:ARM_CLIENT_ID" `
+                  -var "client_secret=$env:ARM_CLIENT_SECRET" `
+                  -var "tenant_id=$env:ARM_TENANT_ID" `
+                  -var "gallery_name=$($env.galleryName)" `
+                  -var "gallery_resource_group=$($env.galleryResourceGroup)" `
+                  -var "baseline_image_name=$($env.baselineImageName)" `
+                  -var "image_version=$(imageVersion)" `
+                  -var "build_id=$(Build.BuildId)" `
+                  -var "image_type=$(imageType)" `
+                  $(imageFile)
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "$(imageType) image build failed"
+                  exit 1
+                }
+                
+                Write-Host ""
+                Write-Host "✓ $(imageType) image built successfully" -ForegroundColor Green
+            displayName: 'Build $(imageType) Image'
+            env:
+              ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+  - stage: PublishManifest
+    displayName: 'Publish Image Manifest'
+    dependsOn: BuildTeamImages
+    condition: succeeded()
+    jobs:
+      - job: CreateManifest
+        displayName: 'Create Image Version Manifest'
+        steps:
+          - checkout: self
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Images-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Creating image version manifest..."
+                
+                # Read infrastructure config
+                $config = Get-Content "config/infrastructure-config.json" | ConvertFrom-Json
+                $env = $config.environments.prod
+                
+                # Get all image versions from gallery
+                $images = az sig image-version list `
+                  --resource-group $env.galleryResourceGroup `
+                  --gallery-name $env.galleryName `
+                  --query "[?publishingProfile.publishedDate > '$(Get-Date -Format 'yyyy-MM-dd')']" | ConvertFrom-Json
+                
+                $manifest = @{
+                  buildNumber = "$(Build.BuildNumber)"
+                  buildDate = (Get-Date -Format "o")
+                  repository = "microsoft.devcenter-images"
+                  environment = "prod"
+                  images = @()
+                }
+                
+                foreach ($img in $images) {
+                  $manifest.images += @{
+                    name = $img.name
+                    version = $img.id.Split('/')[-1]
+                    publishedDate = $img.publishingProfile.publishedDate
+                  }
+                }
+                
+                $manifest | ConvertTo-Json -Depth 10 | Out-File "$(Build.ArtifactStagingDirectory)/image-manifest.json"
+                
+                Write-Host "Manifest created with $($manifest.images.Count) images"
+            displayName: 'Generate Manifest'
+          
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'image-manifest'
+            displayName: 'Publish Manifest Artifact'
+
+  - stage: TriggerSync
+    displayName: 'Trigger Definition Sync'
+    dependsOn: PublishManifest
+    condition: succeeded()
+    jobs:
+      - job: TriggerSyncPipeline
+        displayName: 'Trigger sync-definitions-and-pools Pipeline'
+        steps:
+          - task: InvokeRESTAPI@1
+            displayName: 'Trigger Sync Pipeline'
+            inputs:
+              connectionType: 'connectedServiceName'
+              serviceConnection: 'AzureDevOps-ServiceConnection'
+              method: 'POST'
+              urlSuffix: '/_apis/pipelines/$(SyncPipelineId)/runs?api-version=7.1'
+              body: |
+                {
+                  "resources": {
+                    "repositories": {
+                      "self": {
+                        "refName": "refs/heads/main"
+                      }
+                    }
+                  }
+                }
+              waitForCompletion: 'false'

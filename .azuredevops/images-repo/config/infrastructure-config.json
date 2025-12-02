@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Infrastructure configuration for DevBox image builds. Managed by Operations Team.",
+  "environments": {
+    "prod": {
+      "galleryName": "acg-devbox-prod-eastus",
+      "galleryResourceGroup": "rg-devbox-infrastructure-prod",
+      "devCenterName": "dc-devbox-prod",
+      "devCenterResourceGroup": "rg-devbox-infrastructure-prod",
+      "projectName": "proj-devbox-prod",
+      "networkConnectionName": "nc-devbox-prod-eastus",
+      "baselineImageName": "SecurityBaselineImage",
+      "region": "eastus",
+      "subscriptionId": "00000000-0000-0000-0000-000000000000"
+    },
+    "dev": {
+      "galleryName": "acg-devbox-dev-eastus",
+      "galleryResourceGroup": "rg-devbox-infrastructure-dev",
+      "devCenterName": "dc-devbox-dev",
+      "devCenterResourceGroup": "rg-devbox-infrastructure-dev",
+      "projectName": "proj-devbox-dev",
+      "networkConnectionName": "nc-devbox-dev-eastus",
+      "baselineImageName": "SecurityBaselineImage",
+      "region": "eastus",
+      "subscriptionId": "00000000-0000-0000-0000-000000000000"
+    }
+  },
+  "metadata": {
+    "lastUpdated": "2024-12-02T00:00:00Z",
+    "updatedBy": "operations-team",
+    "version": "1.0",
+    "notes": "This file is managed by the infrastructure team. Development teams should not modify values, only reference them in pipelines."
+  }
+}

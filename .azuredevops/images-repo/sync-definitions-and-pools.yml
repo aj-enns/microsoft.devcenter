@@ -1,0 +1,287 @@
+# Azure DevOps Pipeline for Definition and Pool Synchronization
+# Repository: microsoft.devcenter-images (Developer Repository)
+# This pipeline updates DevBox definitions and pools in DevCenter
+
+trigger: none  # Triggered by build-team-images.yml or manually
+
+pr: none
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  - group: devbox-images-credentials
+  - group: devbox-infrastructure-config
+
+stages:
+  - stage: VerifyGallerySync
+    displayName: 'Wait for Gallery Sync to DevCenter'
+    jobs:
+      - job: WaitForSync
+        displayName: 'Verify Images Synced to DevCenter'
+        timeoutInMinutes: 45
+        steps:
+          - checkout: self
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Images-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "Waiting for Gallery Sync"
+                Write-Host "=========================================="
+                Write-Host ""
+                Write-Host "Custom images take 5-30 minutes to sync from"
+                Write-Host "Compute Gallery to DevCenter."
+                Write-Host ""
+                
+                # Read infrastructure config
+                $config = Get-Content "$(Build.SourcesDirectory)/config/infrastructure-config.json" | ConvertFrom-Json
+                $env = $config.environments.prod
+                
+                Write-Host "DevCenter: $($env.devCenterName)" -ForegroundColor Cyan
+                Write-Host "Resource Group: $($env.devCenterResourceGroup)" -ForegroundColor Cyan
+                Write-Host ""
+                
+                # Poll for sync completion
+                $maxAttempts = 30
+                $attempt = 0
+                $syncComplete = $false
+                
+                while (-not $syncComplete -and $attempt -lt $maxAttempts) {
+                  $attempt++
+                  Write-Host "Attempt $attempt of $maxAttempts..." -ForegroundColor Cyan
+                  
+                  # Check synced images
+                  $syncedImages = az devcenter admin image list `
+                    --dev-center-name $env.devCenterName `
+                    --resource-group $env.devCenterResourceGroup `
+                    --query "[?starts_with(name, 'CustomImages/')].name" -o tsv 2>&1
+                  
+                  if ($syncedImages) {
+                    $imageCount = ($syncedImages -split "`n").Count
+                    Write-Host "  Found $imageCount synced images" -ForegroundColor Gray
+                    
+                    # Check if our expected images are there
+                    $definitions = Get-Content "$(Build.SourcesDirectory)/definitions/devbox-definitions.json" | ConvertFrom-Json
+                    $allSynced = $true
+                    
+                    foreach ($def in $definitions.definitions) {
+                      $imagePath = "CustomImages/$($def.imageName)"
+                      if ($syncedImages -notmatch $def.imageName) {
+                        Write-Host "  ⏳ Waiting for: $($def.imageName)" -ForegroundColor Yellow
+                        $allSynced = $false
+                      } else {
+                        Write-Host "  ✓ Synced: $($def.imageName)" -ForegroundColor Green
+                      }
+                    }
+                    
+                    if ($allSynced) {
+                      Write-Host ""
+                      Write-Host "✓ All images successfully synced to DevCenter!" -ForegroundColor Green
+                      $syncComplete = $true
+                      break
+                    }
+                  }
+                  
+                  if (-not $syncComplete) {
+                    Write-Host "Images not yet synced. Waiting 60 seconds..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds 60
+                  }
+                }
+                
+                if (-not $syncComplete) {
+                  Write-Error "Images did not sync within timeout period"
+                  Write-Host ""
+                  Write-Host "Manual intervention required:" -ForegroundColor Yellow
+                  Write-Host "  1. Check managed identity has Contributor on gallery" -ForegroundColor Yellow
+                  Write-Host "  2. Verify gallery attachment in DevCenter" -ForegroundColor Yellow
+                  Write-Host "  3. Contact infrastructure team if issues persist" -ForegroundColor Yellow
+                  exit 1
+                }
+            displayName: 'Wait for Gallery Sync'
+
+  - stage: UpdateDefinitions
+    displayName: 'Update DevBox Definitions'
+    dependsOn: VerifyGallerySync
+    condition: succeeded()
+    jobs:
+      - job: UpdateDefinitions
+        displayName: 'Create/Update DevBox Definitions'
+        steps:
+          - checkout: self
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Images-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "Updating DevBox Definitions"
+                Write-Host "=========================================="
+                Write-Host ""
+                
+                # Read infrastructure config
+                $config = Get-Content "config/infrastructure-config.json" | ConvertFrom-Json
+                $env = $config.environments.prod
+                
+                Write-Host "DevCenter: $($env.devCenterName)" -ForegroundColor Cyan
+                Write-Host "Resource Group: $($env.devCenterResourceGroup)" -ForegroundColor Cyan
+                Write-Host ""
+                
+                # Read definitions
+                $definitionsFile = Get-Content "definitions/devbox-definitions.json" | ConvertFrom-Json
+                Write-Host "Processing $($definitionsFile.definitions.Count) definitions..." -ForegroundColor Cyan
+                Write-Host ""
+                
+                $created = 0
+                $updated = 0
+                $skipped = 0
+                
+                foreach ($def in $definitionsFile.definitions) {
+                  Write-Host "Definition: $($def.name)" -ForegroundColor Cyan
+                  Write-Host "  Image: $($def.imageName) v$($def.imageVersion)" -ForegroundColor Gray
+                  
+                  # Get image ID from DevCenter
+                  $imageId = az devcenter admin image-version show `
+                    --dev-center-name $env.devCenterName `
+                    --resource-group $env.devCenterResourceGroup `
+                    --gallery-name "CustomImages" `
+                    --image-name $def.imageName `
+                    --version-name $def.imageVersion `
+                    --query "id" -o tsv 2>&1
+                  
+                  if ($LASTEXITCODE -ne 0) {
+                    Write-Host "  ✗ Image not found in DevCenter" -ForegroundColor Red
+                    continue
+                  }
+                  
+                  # Check if definition exists
+                  $existingDef = az devcenter admin devbox-definition show `
+                    --name $def.name `
+                    --dev-center-name $env.devCenterName `
+                    --resource-group $env.devCenterResourceGroup `
+                    --query "name" -o tsv 2>&1
+                  
+                  if ($LASTEXITCODE -eq 0) {
+                    # Update existing definition
+                    Write-Host "  Updating definition..." -ForegroundColor Cyan
+                    az devcenter admin devbox-definition update `
+                      --name $def.name `
+                      --dev-center-name $env.devCenterName `
+                      --resource-group $env.devCenterResourceGroup `
+                      --image-reference id="$imageId" 2>&1 | Out-Null
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                      Write-Host "  ✓ Updated" -ForegroundColor Green
+                      $updated++
+                    }
+                  } else {
+                    # Create new definition
+                    Write-Host "  Creating definition..." -ForegroundColor Cyan
+                    az devcenter admin devbox-definition create `
+                      --name $def.name `
+                      --dev-center-name $env.devCenterName `
+                      --resource-group $env.devCenterResourceGroup `
+                      --location $env.region `
+                      --image-reference id="$imageId" `
+                      --sku name="$($def.computeSku)" `
+                      --os-storage-type "$($def.storageType)" `
+                      --hibernate-support "$($def.hibernationSupport)" 2>&1 | Out-Null
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                      Write-Host "  ✓ Created" -ForegroundColor Green
+                      $created++
+                    }
+                  }
+                  
+                  Write-Host ""
+                }
+                
+                Write-Host "Summary: Created=$created, Updated=$updated, Skipped=$skipped" -ForegroundColor Cyan
+            displayName: 'Update Definitions'
+
+  - stage: SyncPools
+    displayName: 'Synchronize DevBox Pools'
+    dependsOn: UpdateDefinitions
+    condition: succeeded()
+    jobs:
+      - job: SyncPools
+        displayName: 'Create/Update DevBox Pools'
+        steps:
+          - checkout: self
+          
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'DevBox-Images-ServiceConnection'
+              scriptType: 'pscore'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "Synchronizing DevBox Pools"
+                Write-Host "=========================================="
+                Write-Host ""
+                
+                # Read infrastructure config
+                $config = Get-Content "config/infrastructure-config.json" | ConvertFrom-Json
+                $env = $config.environments.prod
+                
+                Write-Host "Project: $($env.projectName)" -ForegroundColor Cyan
+                Write-Host "Resource Group: $($env.devCenterResourceGroup)" -ForegroundColor Cyan
+                Write-Host ""
+                
+                # Read pool configurations
+                $definitionsFile = Get-Content "definitions/devbox-definitions.json" | ConvertFrom-Json
+                Write-Host "Processing $($definitionsFile.pools.Count) pools..." -ForegroundColor Cyan
+                Write-Host ""
+                
+                foreach ($pool in $definitionsFile.pools) {
+                  Write-Host "Pool: $($pool.name)" -ForegroundColor Cyan
+                  Write-Host "  Definition: $($pool.definitionName)" -ForegroundColor Gray
+                  
+                  # Check if pool exists
+                  $existingPool = az devcenter admin pool show `
+                    --name $pool.name `
+                    --project $env.projectName `
+                    --resource-group $env.devCenterResourceGroup `
+                    --query "name" -o tsv 2>&1
+                  
+                  if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  ✓ Pool already exists" -ForegroundColor Green
+                  } else {
+                    # Create pool
+                    Write-Host "  Creating pool..." -ForegroundColor Cyan
+                    
+                    $cmd = "az devcenter admin pool create " +
+                           "--name `"$($pool.name)`" " +
+                           "--project `"$($env.projectName)`" " +
+                           "--resource-group `"$($env.devCenterResourceGroup)`" " +
+                           "--devbox-definition-name `"$($pool.definitionName)`" " +
+                           "--network-connection-name `"$($env.networkConnectionName)`" " +
+                           "--local-administrator `"$($pool.administrator)`" " +
+                           "--location `"$($env.region)`""
+                    
+                    if ($pool.schedule) {
+                      $cmd += " --stop-on-disconnect status=`"Enabled`" grace-period-minutes=60"
+                    }
+                    
+                    Invoke-Expression $cmd 2>&1 | Out-Null
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                      Write-Host "  ✓ Created" -ForegroundColor Green
+                    } else {
+                      Write-Host "  ✗ Failed to create" -ForegroundColor Red
+                    }
+                  }
+                  
+                  Write-Host ""
+                }
+                
+                Write-Host "✓ Pool synchronization complete" -ForegroundColor Green
+                Write-Host ""
+                Write-Host "Users can now provision Dev Boxes from:" -ForegroundColor Cyan
+                Write-Host "https://devportal.microsoft.com" -ForegroundColor Cyan
+            displayName: 'Sync Pools'

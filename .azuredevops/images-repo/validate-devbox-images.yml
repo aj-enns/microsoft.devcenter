@@ -1,0 +1,128 @@
+# Azure DevOps Pipeline Version
+# If using Azure DevOps instead of GitHub Actions, use this pipeline
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - images/packer/teams/**
+      - images/definitions/**
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - images/packer/teams/**
+      - images/definitions/**
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: Validate
+    displayName: 'Validate DevBox Images'
+    jobs:
+      - job: ValidateBaseline
+        displayName: 'Ensure SecurityBaselineImage Usage'
+        steps:
+          - checkout: self
+          
+          - bash: |
+              echo "=========================================="
+              echo "Validating Security Baseline Usage"
+              echo "=========================================="
+              echo ""
+              
+              EXIT_CODE=0
+              IMAGES_DIR="images/packer/teams"
+              
+              for file in $(find "$IMAGES_DIR" -name "*.pkr.hcl" -type f); do
+                echo "Checking: $file"
+                
+                if grep -q "SecurityBaselineImage" "$file"; then
+                  echo "  ✓ Uses SecurityBaselineImage"
+                else
+                  echo "  ✗ ERROR: Does NOT reference SecurityBaselineImage"
+                  EXIT_CODE=1
+                fi
+                
+                if grep -q 'image_publisher.*=.*"MicrosoftWindowsDesktop"' "$file"; then
+                  echo "  ✗ ERROR: References Microsoft base image directly"
+                  EXIT_CODE=1
+                fi
+                
+                echo ""
+              done
+              
+              exit $EXIT_CODE
+            displayName: 'Check SecurityBaselineImage Reference'
+      
+      - job: SecurityScan
+        displayName: 'Scan for Dangerous Patterns'
+        steps:
+          - checkout: self
+          
+          - bash: |
+              echo "=========================================="
+              echo "Scanning for Dangerous Security Patterns"
+              echo "=========================================="
+              echo ""
+              
+              EXIT_CODE=0
+              IMAGES_DIR="images/packer/teams"
+              
+              # Check for dangerous patterns
+              if grep -r -E -i "DisableRealtimeMonitoring \\\$true" "$IMAGES_DIR" 2>/dev/null; then
+                echo "✗ Found: Disables Windows Defender"
+                EXIT_CODE=1
+              fi
+              
+              if grep -r -E -i "EnableLUA.*Value 0" "$IMAGES_DIR" 2>/dev/null; then
+                echo "✗ Found: Disables UAC"
+                EXIT_CODE=1
+              fi
+              
+              if grep -r -E -i "Set-NetFirewallProfile.*-Enabled \\\$?False" "$IMAGES_DIR" 2>/dev/null; then
+                echo "✗ Found: Disables Windows Firewall"
+                EXIT_CODE=1
+              fi
+              
+              if [ $EXIT_CODE -eq 0 ]; then
+                echo "✓ No dangerous patterns detected"
+              fi
+              
+              exit $EXIT_CODE
+            displayName: 'Security Pattern Scan'
+      
+      - job: PackerValidate
+        displayName: 'Validate Packer Syntax'
+        steps:
+          - checkout: self
+          
+          - task: PackerInstaller@1
+            inputs:
+              version: 'latest'
+          
+          - bash: |
+              echo "=========================================="
+              echo "Validating Packer Templates"
+              echo "=========================================="
+              
+              cd images/packer/teams
+              
+              EXIT_CODE=0
+              for file in *.pkr.hcl; do
+                echo "Initializing: $file"
+                packer init "$file" || EXIT_CODE=1
+                
+                echo "Validating: $file"
+                packer validate -syntax-only "$file" || EXIT_CODE=1
+                echo ""
+              done
+              
+              exit $EXIT_CODE
+            displayName: 'Validate Packer Templates'
