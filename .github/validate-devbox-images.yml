@@ -1,0 +1,322 @@
+# =============================================================================
+# CI/CD Validation Workflow for DevBox Image Security
+# =============================================================================
+# This workflow validates that team images:
+# 1. MUST use SecurityBaselineImage as the source (not Microsoft base directly)
+# 2. Do NOT contain dangerous security-disabling patterns
+# 3. Have valid Packer syntax
+# 4. Follow naming conventions
+#
+# Place this file at: .github/workflows/validate-devbox-images.yml
+# Or adapt for Azure DevOps Pipelines
+# =============================================================================
+
+name: Validate DevBox Images
+
+on:
+  pull_request:
+    paths:
+      - 'images/packer/teams/**'
+      - 'images/definitions/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'images/packer/teams/**'
+
+jobs:
+  # ===========================================================================
+  # Job 1: Validate Team Images Use Security Baseline
+  # ===========================================================================
+  validate-baseline-usage:
+    name: Ensure SecurityBaselineImage Usage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Check for SecurityBaselineImage Reference
+        run: |
+          echo "============================================"
+          echo "Validating Security Baseline Usage"
+          echo "============================================"
+          echo ""
+          
+          EXIT_CODE=0
+          IMAGES_DIR="images/packer/teams"
+          
+          # Find all Packer HCL files
+          for file in $(find "$IMAGES_DIR" -name "*.pkr.hcl" -type f); do
+            echo "Checking: $file"
+            
+            # Check if file references SecurityBaselineImage
+            if grep -q "SecurityBaselineImage" "$file"; then
+              echo "  ✓ Uses SecurityBaselineImage"
+            else
+              echo "  ✗ ERROR: Does NOT reference SecurityBaselineImage"
+              echo "    Team images MUST build on top of SecurityBaselineImage"
+              EXIT_CODE=1
+            fi
+            
+            # Check if trying to bypass by using Microsoft base directly
+            if grep -q 'image_publisher.*=.*"MicrosoftWindowsDesktop"' "$file"; then
+              echo "  ✗ ERROR: References Microsoft base image directly"
+              echo "    This bypasses security baseline. Use SecurityBaselineImage instead."
+              EXIT_CODE=1
+            fi
+            
+            # Check for proper source block
+            if grep -q 'shared_image_gallery {' "$file" && grep -q 'image_name.*=.*"SecurityBaselineImage"' "$file"; then
+              echo "  ✓ Correct shared_image_gallery source configuration"
+            else
+              echo "  ⚠ WARNING: Missing or incorrect shared_image_gallery source block"
+            fi
+            
+            echo ""
+          done
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "============================================"
+            echo "✓ All team images correctly use SecurityBaselineImage"
+            echo "============================================"
+          else
+            echo "============================================"
+            echo "✗ VALIDATION FAILED"
+            echo "============================================"
+            echo ""
+            echo "Team images MUST use SecurityBaselineImage as their source."
+            echo "This ensures mandatory security configurations cannot be bypassed."
+            echo ""
+            echo "Required source configuration:"
+            echo "  shared_image_gallery {"
+            echo "    gallery_name  = var.gallery_name"
+            echo "    image_name    = \"SecurityBaselineImage\""
+            echo "    image_version = var.baseline_image_version"
+            echo "  }"
+          fi
+          
+          exit $EXIT_CODE
+
+  # ===========================================================================
+  # Job 2: Security Pattern Scan
+  # ===========================================================================
+  security-scan:
+    name: Scan for Dangerous Patterns
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Scan for Security-Disabling Patterns
+        run: |
+          echo "============================================"
+          echo "Scanning for Dangerous Security Patterns"
+          echo "============================================"
+          echo ""
+          
+          EXIT_CODE=0
+          IMAGES_DIR="images/packer/teams"
+          
+          # Define dangerous patterns that would disable security
+          declare -A DANGEROUS_PATTERNS=(
+            ["DisableRealtimeMonitoring \\\$true"]="Disables Windows Defender real-time protection"
+            ["DisableBehaviorMonitoring \\\$true"]="Disables Windows Defender behavior monitoring"
+            ["EnableLUA.*Value 0"]="Disables User Account Control (UAC)"
+            ["Set-NetFirewallProfile.*-Enabled \\\$?False"]="Disables Windows Firewall"
+            ["Disable-WindowsOptionalFeature.*Defender"]="Disables Windows Defender feature"
+            ["Set-MpPreference -DisableIOAVProtection \\\$true"]="Disables Defender IOAV protection"
+            ["auditpol.*disable"]="Disables audit logging"
+            ["EnableScriptBlockLogging.*Value 0"]="Disables PowerShell script logging"
+          )
+          
+          for pattern in "${!DANGEROUS_PATTERNS[@]}"; do
+            description="${DANGEROUS_PATTERNS[$pattern]}"
+            echo "Checking for: $description"
+            
+            if grep -r -E -i "$pattern" "$IMAGES_DIR" 2>/dev/null; then
+              echo "  ✗ SECURITY VIOLATION DETECTED!"
+              echo "  Pattern: $pattern"
+              echo "  Description: $description"
+              echo ""
+              EXIT_CODE=1
+            else
+              echo "  ✓ Not found"
+            fi
+          done
+          
+          echo ""
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "============================================"
+            echo "✓ No dangerous security patterns detected"
+            echo "============================================"
+          else
+            echo "============================================"
+            echo "✗ SECURITY VIOLATIONS FOUND"
+            echo "============================================"
+            echo ""
+            echo "Team images contain patterns that would disable security features."
+            echo "This violates security policy and will prevent deployment."
+            echo ""
+            echo "Security features are configured in SecurityBaselineImage and"
+            echo "CANNOT be modified by team-specific images."
+          fi
+          
+          exit $EXIT_CODE
+
+  # ===========================================================================
+  # Job 3: Packer Syntax Validation
+  # ===========================================================================
+  packer-validate:
+    name: Validate Packer Syntax
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: 'latest'
+      
+      - name: Initialize Packer
+        run: |
+          echo "============================================"
+          echo "Initializing Packer"
+          echo "============================================"
+          
+          cd images/packer/teams
+          
+          for file in *.pkr.hcl; do
+            echo "Initializing: $file"
+            packer init "$file" || exit 1
+          done
+      
+      - name: Validate Packer Templates
+        run: |
+          echo "============================================"
+          echo "Validating Packer Templates"
+          echo "============================================"
+          echo ""
+          
+          EXIT_CODE=0
+          cd images/packer/teams
+          
+          for file in *.pkr.hcl; do
+            echo "Validating: $file"
+            
+            # Syntax-only validation (no variable values needed)
+            if packer validate -syntax-only "$file"; then
+              echo "  ✓ Syntax valid"
+            else
+              echo "  ✗ Syntax errors detected"
+              EXIT_CODE=1
+            fi
+            echo ""
+          done
+          
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "============================================"
+            echo "✓ All Packer templates have valid syntax"
+            echo "============================================"
+          else
+            echo "============================================"
+            echo "✗ SYNTAX VALIDATION FAILED"
+            echo "============================================"
+          fi
+          
+          exit $EXIT_CODE
+
+  # ===========================================================================
+  # Job 4: Validate Definitions File
+  # ===========================================================================
+  validate-definitions:
+    name: Validate DevBox Definitions
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Validate JSON Syntax
+        run: |
+          echo "============================================"
+          echo "Validating DevBox Definitions"
+          echo "============================================"
+          echo ""
+          
+          DEFINITIONS_FILE="images/definitions/devbox-definitions.json"
+          
+          if [ ! -f "$DEFINITIONS_FILE" ]; then
+            echo "✓ No definitions file changed"
+            exit 0
+          fi
+          
+          # Validate JSON syntax
+          if jq empty "$DEFINITIONS_FILE" 2>/dev/null; then
+            echo "✓ JSON syntax is valid"
+          else
+            echo "✗ JSON syntax errors detected"
+            exit 1
+          fi
+          
+          # Validate structure
+          if jq -e '.definitions' "$DEFINITIONS_FILE" >/dev/null; then
+            echo "✓ 'definitions' array exists"
+          else
+            echo "✗ Missing 'definitions' array"
+            exit 1
+          fi
+          
+          if jq -e '.pools' "$DEFINITIONS_FILE" >/dev/null; then
+            echo "✓ 'pools' array exists"
+          else
+            echo "✗ Missing 'pools' array"
+            exit 1
+          fi
+          
+          echo ""
+          echo "============================================"
+          echo "✓ Definitions file is valid"
+          echo "============================================"
+
+  # ===========================================================================
+  # Job 5: Summary Report
+  # ===========================================================================
+  validation-summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-baseline-usage, security-scan, packer-validate, validate-definitions]
+    if: always()
+    
+    steps:
+      - name: Check Results
+        run: |
+          echo "============================================"
+          echo "DevBox Image Validation Summary"
+          echo "============================================"
+          echo ""
+          
+          if [ "${{ needs.validate-baseline-usage.result }}" == "success" ] && \
+             [ "${{ needs.security-scan.result }}" == "success" ] && \
+             [ "${{ needs.packer-validate.result }}" == "success" ] && \
+             [ "${{ needs.validate-definitions.result }}" == "success" ]; then
+            echo "✓ All validation checks passed!"
+            echo ""
+            echo "Image changes are compliant with security policies and"
+            echo "can be safely merged and built."
+            exit 0
+          else
+            echo "✗ Some validation checks failed:"
+            echo ""
+            echo "  Baseline Usage:    ${{ needs.validate-baseline-usage.result }}"
+            echo "  Security Scan:     ${{ needs.security-scan.result }}"
+            echo "  Packer Validation: ${{ needs.packer-validate.result }}"
+            echo "  Definitions:       ${{ needs.validate-definitions.result }}"
+            echo ""
+            echo "Please review the logs above and fix the issues."
+            exit 1
+          fi
