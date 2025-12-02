@@ -97,6 +97,46 @@ $imagesSP | Out-File -FilePath "images-sp-credentials.json"
 
 **Important:** Store these credentials securely. You'll need them for Azure DevOps variable groups.
 
+#### Step 1a: (Optional) Store Secrets in Azure Key Vault
+
+For production environments, store service principal secrets in Azure Key Vault instead of Azure DevOps variable groups:
+
+```powershell
+# Create Key Vault
+az keyvault create \
+  --name kv-devbox-secrets \
+  --resource-group rg-devbox-prod \
+  --location eastus \
+  --enable-rbac-authorization
+
+# Get current user object ID
+$userObjectId = az ad signed-in-user show --query id -o tsv
+
+# Grant yourself Key Vault Secrets Officer role
+az role assignment create \
+  --role "Key Vault Secrets Officer" \
+  --assignee $userObjectId \
+  --scope /subscriptions/<subscription-id>/resourceGroups/rg-devbox-prod/providers/Microsoft.KeyVault/vaults/kv-devbox-secrets
+
+# Store secrets
+az keyvault secret set --vault-name kv-devbox-secrets --name infra-sp-client-secret --value "<infra-sp-secret>"
+az keyvault secret set --vault-name kv-devbox-secrets --name images-sp-client-secret --value "<images-sp-secret>"
+az keyvault secret set --vault-name kv-devbox-secrets --name tfe-api-token --value "<tfe-token>"
+
+# Grant service principals access to read their own secrets
+az role assignment create \
+  --role "Key Vault Secrets User" \
+  --assignee <infra-sp-object-id> \
+  --scope /subscriptions/<subscription-id>/resourceGroups/rg-devbox-prod/providers/Microsoft.KeyVault/vaults/kv-devbox-secrets
+
+az role assignment create \
+  --role "Key Vault Secrets User" \
+  --assignee <images-sp-object-id> \
+  --scope /subscriptions/<subscription-id>/resourceGroups/rg-devbox-prod/providers/Microsoft.KeyVault/vaults/kv-devbox-secrets
+```
+
+**Note:** When using Key Vault, link it to Azure DevOps variable groups (see Step 3 in Part 2 below).
+
 #### Step 2: Grant User Access Administrator Role
 
 ```powershell
@@ -204,6 +244,8 @@ az repos create \
 
 #### Step 3: Create Variable Groups
 
+**Option A: Direct Secrets (Simple)**
+
 **Infrastructure Variables:**
 
 1. Go to **Pipelines** → **Library** → **+ Variable group**
@@ -231,6 +273,45 @@ AZURE_CLIENT_SECRET   = <images-sp-client-secret>  [Secret]
 AZURE_SUBSCRIPTION_ID = <subscription-id>
 AZURE_TENANT_ID       = <tenant-id>
 ```
+
+**Option B: Key Vault Integration (Production)**
+
+If you created Azure Key Vault in Step 1a:
+
+**Infrastructure Variables:**
+
+1. Go to **Pipelines** → **Library** → **+ Variable group**
+2. Name: `devbox-infrastructure-credentials`
+3. Toggle **Link secrets from an Azure key vault as variables**
+4. Select Azure subscription and Key Vault: `kv-devbox-secrets`
+5. Authorize the connection
+6. Add secrets:
+   - `infra-sp-client-secret` → Map to variable `AZURE_CLIENT_SECRET`
+   - `tfe-api-token` → Map to variable `TFE_TOKEN`
+7. Add plain variables:
+   - `AZURE_CLIENT_ID` = `<infra-sp-client-id>`
+   - `AZURE_SUBSCRIPTION_ID` = `<subscription-id>`
+   - `AZURE_TENANT_ID` = `<tenant-id>`
+   - `TFE_ORGANIZATION` = `<tfe-org-name>`
+   - `TFE_WORKSPACE` = `devbox-infrastructure-prod`
+
+**Images Variables:**
+
+1. Create another variable group: `devbox-images-credentials`
+2. Link to Key Vault: `kv-devbox-secrets`
+3. Add secrets:
+   - `images-sp-client-secret` → Map to variable `AZURE_CLIENT_SECRET`
+4. Add plain variables:
+   - `AZURE_CLIENT_ID` = `<images-sp-client-id>`
+   - `AZURE_SUBSCRIPTION_ID` = `<subscription-id>`
+   - `AZURE_TENANT_ID` = `<tenant-id>`
+
+**Key Vault Benefits:**
+- ✅ Centralized secrets management
+- ✅ Automatic secret rotation support
+- ✅ Audit trail for secret access
+- ✅ Secrets never stored in Azure DevOps
+- ✅ Compliance and governance alignment
 
 #### Step 4: Clone and Setup Infrastructure Repository
 
