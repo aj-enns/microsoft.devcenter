@@ -7,8 +7,8 @@ trigger:
       - main
   paths:
     include:
-      - terraform/devbox-with-multi-images-and-roles/images/packer/teams/**
-      - terraform/devbox-with-multi-images-and-roles/images/definitions/**
+      - images/packer/teams/**
+      - images/definitions/**
 
 pr:
   branches:
@@ -16,8 +16,8 @@ pr:
       - main
   paths:
     include:
-      - terraform/devbox-with-multi-images-and-roles/images/packer/teams/**
-      - terraform/devbox-with-multi-images-and-roles/images/definitions/**
+      - images/packer/teams/**
+      - images/definitions/**
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -38,7 +38,7 @@ stages:
               echo ""
               
               EXIT_CODE=0
-              IMAGES_DIR="terraform/devbox-with-multi-images-and-roles/images/packer/teams"
+              IMAGES_DIR="images/packer/teams"
               
               for file in $(find "$IMAGES_DIR" -name "*.pkr.hcl" -type f); do
                 echo "Checking: $file"
@@ -73,7 +73,7 @@ stages:
               echo ""
               
               EXIT_CODE=0
-              IMAGES_DIR="terraform/devbox-with-multi-images-and-roles/images/packer/teams"
+              IMAGES_DIR="images/packer/teams"
               
               # Check for dangerous patterns
               if grep -r -E -i "DisableRealtimeMonitoring \\\$true" "$IMAGES_DIR" 2>/dev/null; then
@@ -112,7 +112,7 @@ stages:
               echo "Validating Packer Templates"
               echo "=========================================="
               
-              cd terraform/devbox-with-multi-images-and-roles/images/packer/teams
+              cd images/packer/teams
               
               EXIT_CODE=0
               for file in *.pkr.hcl; do

@@ -8,7 +8,7 @@ trigger:
       - main
   paths:
     include:
-      - terraform/devbox-with-multi-images-and-roles/infrastructure/**
+      - infrastructure/**
 
 pr:
   branches:
@@ -16,7 +16,7 @@ pr:
       - main
   paths:
     include:
-      - terraform/devbox-with-multi-images-and-roles/infrastructure/**
+      - infrastructure/**
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -40,7 +40,7 @@ stages:
             displayName: 'Install Terraform'
           
           - bash: |
-              cd terraform/devbox-with-multi-images-and-roles/infrastructure
+              cd infrastructure
               
               echo "=========================================="
               echo "Checking Terraform Formatting"

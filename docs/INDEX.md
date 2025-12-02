@@ -7,23 +7,21 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 | Document | Purpose | Audience | Reading Time |
 |----------|---------|----------|--------------|
 | [README.md](../README.md) | **Complete reference** - Setup, usage, troubleshooting | Everyone | 45 min |
-| [QUICKSTART.md](QUICKSTART.md) | **Fast setup guide** - Get running quickly | Operations & Dev Teams | 10 min |
+| [INSTALL-CLI.md](INSTALL-CLI.md) | **CLI deployment guide** - Quick local setup | Operations & Dev Teams | 15 min |
+| [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md) | **Enterprise deployment** - Azure DevOps + TFE | Operations & Dev Teams | 1-2 hours |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Design decisions** - Why it's built this way | Technical Leads, Architects | 20 min |
-| [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | **What was built** - Overview of deliverables | Project Managers, Stakeholders | 15 min |
 | [WORKFLOWS.md](WORKFLOWS.md) | **Visual diagrams** - How it all works together | Everyone | 15 min |
-| [GOLDEN-BASELINE-IMPLEMENTATION.md](GOLDEN-BASELINE-IMPLEMENTATION.md) | **Security enforcement** - Golden image approach | Operations & Security Teams | 30 min |
-| [SECURITY-ENFORCEMENT-SUMMARY.md](SECURITY-ENFORCEMENT-SUMMARY.md) | **How bypass is prevented** - 5-layer defense | Security Teams, Auditors | 15 min |
 
 ## 🚀 Getting Started
 
 ### I want to... deploy infrastructure
-→ Start with [QUICKSTART.md](QUICKSTART.md#-15-minute-setup-operations-team)  
-→ Then read [README.md - Operations Team Guide](../README.md#-operations-team-guide)  
+→ Start with [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
+→ Then read [README.md - Operations Team Workflow](../README.md#operations-team-workflow)  
 → Reference [infrastructure/scripts/](../infrastructure/scripts/)
 
 ### I want to... build a custom image
-→ Start with [QUICKSTART.md](QUICKSTART.md#-20-minute-image-build-development-teams)  
-→ Then read [README.md - Development Team Guide](../README.md#-development-team-guide)  
+→ Start with [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
+→ Then read [README.md - Development Team Workflow](../README.md#development-team-workflow)  
 → Example: [images/packer/teams/vscode-devbox.pkr.hcl](../images/packer/teams/vscode-devbox.pkr.hcl)
 
 ### I want to... understand the architecture
@@ -32,10 +30,9 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 → See [README.md - Separation of Duties](../README.md#-separation-of-duties)
 
 ### I want to... configure security and compliance
-→ **START HERE:** [SECURITY-ENFORCEMENT-SUMMARY.md](SECURITY-ENFORCEMENT-SUMMARY.md) - Understand 5-layer defense  
-→ **Then read:** [GOLDEN-BASELINE-IMPLEMENTATION.md](GOLDEN-BASELINE-IMPLEMENTATION.md) - Step-by-step setup  
+→ Read about security baseline in [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
 → Review [infrastructure/policies/compliance-settings.md](../infrastructure/policies/compliance-settings.md)  
-→ See [README.md - Security Implementation](../README.md#-security-implementation)
+→ See [README.md - Separation of Duties](../README.md#separation-of-duties)
 
 ### I want to... set up CI/CD
 → Read [README.md - CI/CD Integration](../README.md#-cicd-integration)  
@@ -43,15 +40,15 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 → Integrate with [infrastructure/scripts/04-sync-pools.ps1](../infrastructure/scripts/04-sync-pools.ps1)
 
 ### I want to... troubleshoot issues
-→ Jump to [README.md - Troubleshooting](../README.md#-troubleshooting)  
-→ Check [QUICKSTART.md - Common Issues](QUICKSTART.md#-common-issues)  
+→ Jump to [README.md - Troubleshooting](../README.md#troubleshooting)  
+→ Check troubleshooting in [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
 → Review error logs and follow diagnostics
 
 ## 👥 Documentation by Role
 
 ### Operations Team
-**Primary:** [README.md - Operations Team Guide](../README.md#-operations-team-guide)  
-**Quick Ref:** [QUICKSTART.md](QUICKSTART.md#-15-minute-setup-operations-team)  
+**Primary:** [README.md - Operations Team Workflow](../README.md#operations-team-workflow)  
+**Installation:** [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
 **Scripts:** [infrastructure/scripts/](../infrastructure/scripts/)  
 **Config:** [infrastructure/terraform.tfvars.example](../infrastructure/terraform.tfvars.example)
 
@@ -63,8 +60,8 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 - Monitoring and maintenance
 
 ### Development Teams
-**Primary:** [README.md - Development Team Guide](../README.md#-development-team-guide)  
-**Quick Ref:** [QUICKSTART.md](QUICKSTART.md#-20-minute-image-build-development-teams)  
+**Primary:** [README.md - Development Team Workflow](../README.md#development-team-workflow)  
+**Installation:** [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
 **Examples:** [images/packer/teams/](../images/packer/teams/)  
 **Definitions:** [images/definitions/devbox-definitions.json](../images/definitions/devbox-definitions.json)
 
@@ -88,9 +85,9 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 - Base provisioner requirements
 
 ### Project Managers / Stakeholders
-**Primary:** [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)  
+**Primary:** [README.md](../README.md)  
 **Architecture:** [ARCHITECTURE.md](ARCHITECTURE.md)  
-**Benefits:** [README.md - Separation of Duties](../README.md#-separation-of-duties)
+**Installation:** [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)
 
 **Key Topics:**
 - Project overview
@@ -194,7 +191,7 @@ images/
 ## ❓ FAQ - Quick Answers
 
 **Q: Where do I start?**  
-A: Operations: [QUICKSTART.md](QUICKSTART.md#-15-minute-setup-operations-team) | Developers: [QUICKSTART.md](QUICKSTART.md#-20-minute-image-build-development-teams)
+A: Choose deployment method: [INSTALL-CLI.md](INSTALL-CLI.md) for quick start or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md) for enterprise
 
 **Q: How do I customize an image?**  
 A: See [README.md - Building Custom Images](../README.md#building-custom-images)
@@ -212,7 +209,7 @@ A: See [images/packer/base/security-baseline.pkr.hcl](../images/packer/base/secu
 A: See [README.md - Image Build Issues](../README.md#image-build-issues)
 
 **Q: Can I use this in production?**  
-A: Yes! See [IMPLEMENTATION_SUMMARY.md - What's Ready for Production](IMPLEMENTATION_SUMMARY.md#-whats-ready-for-production)
+A: Yes! See [README.md](../README.md) and choose your deployment method: [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)
 
 **Q: How do I set up CI/CD?**  
 A: See [README.md - CI/CD Integration](../README.md#-cicd-integration)
@@ -242,8 +239,8 @@ A: See [README.md - CI/CD Integration](../README.md#-cicd-integration)
 - [README.md](../README.md) - Complete reference
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Design decisions
 - [WORKFLOWS.md](WORKFLOWS.md) - Visual diagrams
-- [QUICKSTART.md](QUICKSTART.md) - Fast setup
-- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - What was built
+- [INSTALL-CLI.md](INSTALL-CLI.md) - Local Terraform deployment
+- [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md) - Enterprise deployment
 
 ## 🆘 Getting Help
 

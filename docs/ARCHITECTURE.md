@@ -20,7 +20,7 @@ We need to deploy Microsoft DevCenter with custom images where:
 We will implement a **two-repository architecture** that separates concerns:
 
 ### Repository 1: Infrastructure (Operations Owned)
-**Location:** `terraform/devbox-with-multi-images-and-roles/infrastructure/`
+**Location:** `infrastructure/`
 
 **Responsibilities:**
 - Deploy DevCenter and Project resources
@@ -35,7 +35,7 @@ We will implement a **two-repository architecture** that separates concerns:
 **Approval Required:** Operations Team for all changes
 
 ### Repository 2: Images (Development Teams Owned)
-**Location:** `terraform/devbox-with-multi-images-and-roles/images/`
+**Location:** `images/`
 
 **Responsibilities:**
 - Build custom images using Packer
@@ -164,7 +164,7 @@ We will implement a **two-repository architecture** that separates concerns:
 
 **For Learning Curve:**
 - Comprehensive documentation (README.md)
-- Quick start guide (QUICKSTART.md)
+- Installation guides (INSTALL-CLI.md, INSTALL-ADO-TFE.md)
 - Example templates for each language/stack
 - Training sessions for team leads
 

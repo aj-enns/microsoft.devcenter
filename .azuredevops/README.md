@@ -148,7 +148,7 @@ Terraform Version: Latest (or specific version)
 # VCS Connection
 Repository: azure-devops.com/your-org/microsoft.devcenter
 Branch: main
-Working Directory: terraform/devbox-with-multi-images-and-roles/infrastructure
+Working Directory: infrastructure
 
 # Trigger Patterns (VCS Settings)
 Automatic Run Triggering: Enabled
@@ -274,7 +274,7 @@ enable_nat_gateway     = true
 git checkout -b feature/add-python-image
 
 # 2. Add new Packer template
-# terraform/devbox-with-multi-images-and-roles/images/packer/teams/python-devbox.pkr.hcl
+# images/packer/teams/python-devbox.pkr.hcl
 
 # 3. Create pull request
 # → validate-devbox-images.yml runs automatically
@@ -295,7 +295,7 @@ git checkout -b feature/add-python-image
 git checkout -b feature/add-vnet-peering
 
 # 2. Modify Terraform
-# terraform/devbox-with-multi-images-and-roles/infrastructure/main.tf
+# infrastructure/main.tf
 
 # 3. Create pull request
 # → terraform-infrastructure.yml validates formatting and syntax
