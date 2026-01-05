@@ -83,7 +83,7 @@ stages:
                 Write-Host ""
                 
                 # Read Terraform outputs for gallery info
-                Set-Location "$(Build.SourcesDirectory)/terraform"
+                Set-Location "$(Build.SourcesDirectory)/infrastructure"
                 $outputs = terraform output -json | ConvertFrom-Json
                 
                 $galleryName = $outputs.gallery_name.value
@@ -147,7 +147,7 @@ stages:
                 Write-Host "Creating baseline image manifest..."
                 
                 # Read Terraform outputs
-                Set-Location "$(Build.SourcesDirectory)/terraform"
+                Set-Location "$(Build.SourcesDirectory)/infrastructure"
                 $outputs = terraform output -json | ConvertFrom-Json
                 
                 $manifest = @{

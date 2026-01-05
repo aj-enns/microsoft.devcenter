@@ -112,6 +112,29 @@ resource "azurerm_shared_image_gallery" "main" {
   }
 }
 
+# Security Baseline Image Definition
+# This MUST exist before Packer can publish image versions to it
+resource "azurerm_shared_image" "security_baseline" {
+  name                = "SecurityBaselineImage"
+  gallery_name        = azurerm_shared_image_gallery.main.name
+  resource_group_name = azurerm_resource_group.main.name
+  location            = var.location
+  os_type             = "Windows"
+  hyper_v_generation  = "V2"
+
+  identifier {
+    publisher = "DevBoxOperations"
+    offer     = "SecurityBaseline"
+    sku       = "win11-ent-cpc-m365"
+  }
+
+  tags = {
+    Environment = "DevCenter"
+    ManagedBy   = "Operations-Team"
+    Purpose     = "Security baseline for all DevBox images"
+  }
+}
+
 # DevCenter Module
 module "devcenter" {
   source = "./modules/devcenter"
