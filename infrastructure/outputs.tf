@@ -26,9 +26,19 @@ output "gallery_name" {
   value       = azurerm_shared_image_gallery.main.name
 }
 
+output "gallery_resource_group" {
+  description = "The resource group containing the Azure Compute Gallery"
+  value       = azurerm_resource_group.main.name
+}
+
 output "gallery_id" {
   description = "The ID of the Azure Compute Gallery"
   value       = azurerm_shared_image_gallery.main.id
+}
+
+output "security_baseline_image_name" {
+  description = "The name of the Security Baseline image definition"
+  value       = azurerm_shared_image.security_baseline.name
 }
 
 output "managed_identity_principal_id" {

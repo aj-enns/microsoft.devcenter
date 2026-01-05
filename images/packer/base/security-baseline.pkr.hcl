@@ -54,6 +54,36 @@ variable "location" {
   default     = "eastus"
 }
 
+variable "gallery_resource_group" {
+  type        = string
+  description = "Resource group that contains the Azure Compute Gallery (optional). If not set, uses resource_group_name"
+  default     = ""
+}
+
+variable "client_id" {
+  type        = string
+  description = "Service principal client id (optional, read from ARM_CLIENT_ID env by default)"
+  default     = env("ARM_CLIENT_ID")
+}
+
+variable "client_secret" {
+  type        = string
+  description = "Service principal client secret (optional, read from ARM_CLIENT_SECRET env by default)"
+  default     = env("ARM_CLIENT_SECRET")
+}
+
+variable "tenant_id" {
+  type        = string
+  description = "Azure tenant id (optional, read from ARM_TENANT_ID env by default)"
+  default     = env("ARM_TENANT_ID")
+}
+
+variable "build_id" {
+  type        = string
+  description = "CI build id (optional, used for traceability)"
+  default     = env("BUILD_BUILDID")
+}
+
 variable "vm_size" {
   type        = string
   description = "Azure VM size for the build process"
@@ -71,7 +101,7 @@ source "azure-arm" "security_baseline" {
   subscription_id    = var.subscription_id
 
   # Build VM Configuration
-  managed_image_resource_group_name = var.resource_group_name
+  managed_image_resource_group_name = var.gallery_resource_group != "" ? var.gallery_resource_group : var.resource_group_name
   managed_image_name                = "SecurityBaselineImage-${var.image_version}"
   
   # Packer will create a temporary resource group for the build
@@ -95,7 +125,7 @@ source "azure-arm" "security_baseline" {
   # Azure Compute Gallery Destination
   shared_image_gallery_destination {
     subscription         = var.subscription_id
-    resource_group       = var.resource_group_name
+    resource_group       = var.gallery_resource_group != "" ? var.gallery_resource_group : var.resource_group_name
     gallery_name         = var.gallery_name
     image_name           = "SecurityBaselineImage"
     image_version        = var.image_version
