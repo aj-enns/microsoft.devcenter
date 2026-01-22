@@ -21,29 +21,29 @@ Access is controlled at **three levels**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Azure AD Security Groups                     │
+│                     Azure AD Security Groups                    │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Level 1: DevCenter Project Access                               │
-│  Role: "DevCenter Dev Box User"                                  │
-│  Scope: Project                                                  │
-│  Who: All developers who need Dev Boxes                          │
+│  Level 1: DevCenter Project Access                              │
+│  Role: "DevCenter Dev Box User"                                 │
+│  Scope: Project                                                 │
+│  Who: All developers who need Dev Boxes                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Level 2: Pool Access (Future - requires custom roles or tags)  │
-│  Control which teams can use which pools                         │
-│  Expensive SKUs → Senior Developers only                         │
+│  Control which teams can use which pools                        │
+│  Expensive SKUs → Senior Developers only                        │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Level 3: Per-User Limits                                        │
-│  max_dev_boxes_per_user = 10 (configurable in Terraform)         │
-│  Prevents runaway provisioning                                   │
+│  Level 3: Per-User Limits                                       │
+│  max_dev_boxes_per_user = 10 (configurable in Terraform)        │
+│  Prevents runaway provisioning                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -66,25 +66,25 @@ Create pools with different SKU sizes and assign access to security groups:
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │ Standard Pools (All Developers)                                    │
-│ ├── VSCode-Standard-Pool (8 vCPU, 32GB RAM, 256GB)                │
-│ ├── Java-Standard-Pool (8 vCPU, 32GB RAM, 256GB)                  │
-│ └── DotNet-Standard-Pool (8 vCPU, 32GB RAM, 256GB)                │
-│     Est. Cost: ~$0.34/hour per Dev Box                            │
+│ ├── VSCode-Standard-Pool (8 vCPU, 32GB RAM, 256GB)                 │
+│ ├── Java-Standard-Pool (8 vCPU, 32GB RAM, 256GB)                   │
+│ └── DotNet-Standard-Pool (8 vCPU, 32GB RAM, 256GB)                 │
+│     Est. Cost: ~$0.34/hour per Dev Box                             │
 └────────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────────┐
 │ Power User Pools (Senior Developers / Leads)                       │
-│ ├── VSCode-Power-Pool (16 vCPU, 64GB RAM, 512GB)                  │
-│ └── Java-Power-Pool (16 vCPU, 64GB RAM, 512GB)                    │
-│     Est. Cost: ~$0.68/hour per Dev Box                            │
-│     Access: SG-DevBox-PowerUsers                                  │
+│ ├── VSCode-Power-Pool (16 vCPU, 64GB RAM, 512GB)                   │
+│ └── Java-Power-Pool (16 vCPU, 64GB RAM, 512GB)                     │
+│     Est. Cost: ~$0.68/hour per Dev Box                             │
+│     Access: SG-DevBox-PowerUsers                                   │
 └────────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────────┐
 │ High-Performance Pools (Data Science / ML Engineers)               │
-│ └── DataScience-Pool (32 vCPU, 128GB RAM, 1TB)                    │
-│     Est. Cost: ~$1.36/hour per Dev Box                            │
-│     Access: SG-DevBox-DataScience                                 │
+│ └── DataScience-Pool (32 vCPU, 128GB RAM, 1TB)                     │
+│     Est. Cost: ~$1.36/hour per Dev Box                             │
+│     Access: SG-DevBox-DataScience                                  │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
