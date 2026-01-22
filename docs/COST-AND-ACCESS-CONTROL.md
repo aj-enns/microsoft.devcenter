@@ -6,6 +6,7 @@ This document defines how to control who can deploy Dev Boxes, restrict access t
 
 - [Access Control Model](#access-control-model)
 - [Pool-Based Access Control](#pool-based-access-control)
+- [Cost Center Integration](#cost-center-integration)
 - [SKU Governance](#sku-governance)
 - [Azure Budget Configuration](#azure-budget-configuration)
 - [Cost Monitoring](#cost-monitoring)
@@ -151,6 +152,237 @@ resource "azurerm_role_assignment" "datascience_devbox_user" {
   principal_id         = var.datascience_group_id
   principal_type       = "Group"
 }
+```
+
+---
+
+## Cost Center Integration
+
+Link DevCenter projects to organizational cost centers for accurate chargeback and budget tracking.
+
+### Strategy: Projects Linked to Cost Centers
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Cost Center Assignment Model                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Project: devbox-standard          Project: devbox-datascience       │
+│  ├── CostCenter: CC-1001          ├── CostCenter: CC-2001           │
+│  ├── Department: Engineering      ├── Department: Analytics          │
+│  └── Budget: $3,000/month         └── Budget: $5,000/month          │
+│                                                                      │
+│  Project: devbox-power                                               │
+│  ├── CostCenter: CC-1001                                            │
+│  ├── Department: Engineering                                         │
+│  └── Budget: $2,000/month                                           │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Terraform: Projects with Cost Center Tags
+
+```hcl
+# infrastructure/modules/devcenter/main.tf
+
+resource "azurerm_dev_center_project" "standard" {
+  name                       = "${var.project_name}-standard"
+  resource_group_name        = var.resource_group_name
+  location                   = var.location
+  dev_center_id              = azurerm_dev_center.main.id
+  maximum_dev_boxes_per_user = 5
+
+  tags = {
+    CostCenter  = "CC-1001"
+    Department  = "Engineering"
+    Environment = "Development"
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "azurerm_dev_center_project" "datascience" {
+  name                       = "${var.project_name}-datascience"
+  resource_group_name        = var.resource_group_name
+  location                   = var.location
+  dev_center_id              = azurerm_dev_center.main.id
+  maximum_dev_boxes_per_user = 2
+
+  tags = {
+    CostCenter  = "CC-2001"
+    Department  = "Analytics"
+    Environment = "Development"
+    ManagedBy   = "Terraform"
+  }
+}
+```
+
+### Dynamic Project Creation with Cost Centers
+
+Add to `infrastructure/variables.tf`:
+
+```hcl
+variable "projects" {
+  description = "Map of projects with their cost center assignments"
+  type = map(object({
+    cost_center            = string
+    department             = string
+    max_dev_boxes_per_user = number
+    monthly_budget         = number
+    allowed_skus           = list(string)
+  }))
+  default = {
+    standard = {
+      cost_center            = "CC-1001"
+      department             = "Engineering"
+      max_dev_boxes_per_user = 5
+      monthly_budget         = 3000
+      allowed_skus           = ["general_i_8c32gb256ssd_v2"]
+    }
+    power = {
+      cost_center            = "CC-1001"
+      department             = "Engineering"
+      max_dev_boxes_per_user = 3
+      monthly_budget         = 2000
+      allowed_skus           = ["general_i_16c64gb512ssd_v2"]
+    }
+    datascience = {
+      cost_center            = "CC-2001"
+      department             = "Analytics"
+      max_dev_boxes_per_user = 2
+      monthly_budget         = 5000
+      allowed_skus           = ["general_i_32c128gb1024ssd_v2"]
+    }
+  }
+}
+```
+
+Create projects dynamically:
+
+```hcl
+# infrastructure/modules/devcenter/main.tf
+
+resource "azurerm_dev_center_project" "projects" {
+  for_each = var.projects
+
+  name                       = "${var.project_name}-${each.key}"
+  resource_group_name        = var.resource_group_name
+  location                   = var.location
+  dev_center_id              = azurerm_dev_center.main.id
+  maximum_dev_boxes_per_user = each.value.max_dev_boxes_per_user
+
+  tags = {
+    CostCenter  = each.value.cost_center
+    Department  = each.value.department
+    Environment = "Development"
+    ManagedBy   = "Terraform"
+  }
+}
+```
+
+### Querying Costs by Cost Center
+
+```powershell
+# Get costs grouped by CostCenter tag
+az cost management query `
+  --type "Usage" `
+  --timeframe "MonthToDate" `
+  --dataset-aggregation '{"totalCost": {"name": "Cost", "function": "Sum"}}' `
+  --dataset-grouping '[{"type": "TagKey", "name": "CostCenter"}]' `
+  --scope "/subscriptions/<subscription-id>"
+
+# Get costs for a specific cost center
+az cost management query `
+  --type "Usage" `
+  --timeframe "MonthToDate" `
+  --dataset-filter '{
+    "tags": {
+      "name": "CostCenter",
+      "operator": "In",
+      "values": ["CC-1001"]
+    }
+  }' `
+  --scope "/subscriptions/<subscription-id>"
+```
+
+### Budget Per Cost Center
+
+Create separate budgets for each cost center:
+
+```hcl
+# infrastructure/main.tf
+
+resource "azurerm_consumption_budget_subscription" "costcenter_budgets" {
+  for_each = toset(distinct([for p in var.projects : p.cost_center]))
+
+  name            = "budget-devbox-${each.key}"
+  subscription_id = data.azurerm_subscription.current.id
+  amount          = sum([for p in var.projects : p.monthly_budget if p.cost_center == each.key])
+  time_grain      = "Monthly"
+
+  time_period {
+    start_date = "2026-01-01T00:00:00Z"
+    end_date   = "2027-12-31T23:59:59Z"
+  }
+
+  filter {
+    tag {
+      name   = "CostCenter"
+      values = [each.key]
+    }
+  }
+
+  notification {
+    enabled        = true
+    threshold      = 50.0
+    operator       = "GreaterThan"
+    threshold_type = "Actual"
+    contact_emails = var.budget_alert_emails
+  }
+
+  notification {
+    enabled        = true
+    threshold      = 80.0
+    operator       = "GreaterThan"
+    threshold_type = "Actual"
+    contact_emails = var.budget_alert_emails
+  }
+
+  notification {
+    enabled        = true
+    threshold      = 100.0
+    operator       = "GreaterThan"
+    threshold_type = "Forecasted"
+    contact_emails = var.budget_alert_emails
+  }
+}
+```
+
+### Cost Center Reporting
+
+Generate monthly chargeback reports:
+
+```powershell
+# Monthly cost report by cost center
+$startDate = (Get-Date).AddMonths(-1).ToString("yyyy-MM-01")
+$endDate = (Get-Date).ToString("yyyy-MM-01")
+
+$report = az cost management query `
+  --type "Usage" `
+  --timeframe "Custom" `
+  --time-period start=$startDate end=$endDate `
+  --dataset-aggregation '{"totalCost": {"name": "Cost", "function": "Sum"}}' `
+  --dataset-grouping '[{"type": "TagKey", "name": "CostCenter"}, {"type": "TagKey", "name": "Department"}]' `
+  --scope "/subscriptions/<subscription-id>" | ConvertFrom-Json
+
+# Export to CSV for finance team
+$report.properties.rows | ForEach-Object {
+    [PSCustomObject]@{
+        CostCenter = $_[0]
+        Department = $_[1]
+        TotalCost  = $_[2]
+        Currency   = $_[3]
+    }
+} | Export-Csv -Path "devbox-chargeback-report.csv" -NoTypeInformation
 ```
 
 ---
@@ -440,6 +672,8 @@ az ad group member add --group "SG-DevBox-DataScience" --member-id <ds-engineer-
 | Auto-Stop Schedule | Cost Saving | `images/definitions/devbox-definitions.json` |
 | Pool Access by Group | Access Control | Azure AD + Role Assignments |
 | SKU Restrictions | Governance | Definitions + Separate Projects |
+| Cost Center Tags | Chargeback | Project tags in Terraform |
+| Budget per Cost Center | Monitoring | `azurerm_consumption_budget_subscription` |
 | Budget Alerts | Monitoring | `infrastructure/main.tf` (Budget resource) |
 | Cost Tags | Tracking | Resource tags across all resources |
 

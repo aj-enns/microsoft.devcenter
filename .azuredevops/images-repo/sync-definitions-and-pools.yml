@@ -145,11 +145,11 @@ stages:
                   Write-Host "Definition: $($def.name)" -ForegroundColor Cyan
                   Write-Host "  Image: $($def.imageName) v$($def.imageVersion)" -ForegroundColor Gray
                   
-                  # Get image ID from DevCenter
+                  # Get image ID from DevCenter (use gallery name from config)
                   $imageId = az devcenter admin image-version show `
                     --dev-center-name $env.devCenterName `
                     --resource-group $env.devCenterResourceGroup `
-                    --gallery-name "CustomImages" `
+                    --gallery-name $env.galleryName `
                     --image-name $def.imageName `
                     --version-name $def.imageVersion `
                     --query "id" -o tsv 2>&1
@@ -169,20 +169,27 @@ stages:
                   if ($LASTEXITCODE -eq 0) {
                     # Update existing definition
                     Write-Host "  Updating definition..." -ForegroundColor Cyan
-                    az devcenter admin devbox-definition update `
+                    $updateResult = az devcenter admin devbox-definition update `
                       --name $def.name `
                       --dev-center-name $env.devCenterName `
                       --resource-group $env.devCenterResourceGroup `
-                      --image-reference id="$imageId" 2>&1 | Out-Null
+                      --image-reference id="$imageId" 2>&1
                     
                     if ($LASTEXITCODE -eq 0) {
-                      Write-Host "  ✓ Updated" -ForegroundColor Green
+                      Write-Host "  [OK] Updated" -ForegroundColor Green
                       $updated++
+                    } else {
+                      Write-Host "  [FAILED] Update failed:" -ForegroundColor Red
+                      Write-Host "  $updateResult" -ForegroundColor Red
                     }
                   } else {
                     # Create new definition
                     Write-Host "  Creating definition..." -ForegroundColor Cyan
-                    az devcenter admin devbox-definition create `
+                    Write-Host "  Image ID: $imageId" -ForegroundColor Gray
+                    Write-Host "  SKU: $($def.computeSku)" -ForegroundColor Gray
+                    Write-Host "  Storage: $($def.storageType)" -ForegroundColor Gray
+                    
+                    $createResult = az devcenter admin devbox-definition create `
                       --name $def.name `
                       --dev-center-name $env.devCenterName `
                       --resource-group $env.devCenterResourceGroup `
@@ -190,11 +197,14 @@ stages:
                       --image-reference id="$imageId" `
                       --sku name="$($def.computeSku)" `
                       --os-storage-type "$($def.storageType)" `
-                      --hibernate-support "$($def.hibernationSupport)" 2>&1 | Out-Null
+                      --hibernate-support "$($def.hibernationSupport)" 2>&1
                     
                     if ($LASTEXITCODE -eq 0) {
-                      Write-Host "  ✓ Created" -ForegroundColor Green
+                      Write-Host "  [OK] Created" -ForegroundColor Green
                       $created++
+                    } else {
+                      Write-Host "  [FAILED] Create failed:" -ForegroundColor Red
+                      Write-Host "  $createResult" -ForegroundColor Red
                     }
                   }
                   

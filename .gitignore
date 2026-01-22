@@ -57,3 +57,5 @@
 # Temporary files
 **/temp/
 **/tmp/
+# Personal/test files
+**/*taarush*
