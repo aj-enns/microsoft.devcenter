@@ -83,8 +83,9 @@ source "azure-arm" "vscode_customization" {
 
   # Build Configuration
   # Publish directly to gallery (required for TrustedLaunch/SecureBoot support)
-  location = var.location
-  vm_size  = var.vm_size
+  location                 = var.location
+  vm_size                  = var.vm_size
+  build_resource_group_name = var.resource_group_name  # Build VM in same RG as gallery
 
   # =========================================================================
   # SOURCE IMAGE: SecurityBaselineImage (REQUIRED - DO NOT CHANGE)

@@ -103,10 +103,23 @@ stages:
             fetchDepth: 2
           
           - pwsh: |
-              Write-Host "Detecting which images need to be rebuilt..."
+              Write-Host "=== Detecting which images need to be rebuilt ===" -ForegroundColor Cyan
+              Write-Host ""
               
               # Get changed files in last commit
+              Write-Host "DEBUG: Running git diff HEAD~1 HEAD" -ForegroundColor Yellow
               $changedFiles = git diff --name-only HEAD~1 HEAD
+              
+              Write-Host "DEBUG: Changed files count: $($changedFiles.Count)" -ForegroundColor Yellow
+              if ($changedFiles) {
+                Write-Host "DEBUG: Changed files:" -ForegroundColor Yellow
+                foreach ($f in $changedFiles) {
+                  Write-Host "  - $f" -ForegroundColor Gray
+                }
+              } else {
+                Write-Host "DEBUG: No changed files detected" -ForegroundColor Yellow
+              }
+              Write-Host ""
               
               $buildVSCode = $false
               $buildJava = $false
@@ -114,11 +127,25 @@ stages:
               $buildDataScience = $false
               
               foreach ($file in $changedFiles) {
-                if ($file -match "packer/teams/vscode") { $buildVSCode = $true }
-                if ($file -match "packer/teams/java") { $buildJava = $true }
-                if ($file -match "packer/teams/dotnet") { $buildDotNet = $true }
-                if ($file -match "packer/teams/datascience") { $buildDataScience = $true }
-                if ($file -match "definitions/devbox-definitions.json") {
+                Write-Host "DEBUG: Checking file: $file" -ForegroundColor Gray
+                if ($file -match "images/packer/teams/vscode") { 
+                  Write-Host "  -> Matched vscode pattern!" -ForegroundColor Green
+                  $buildVSCode = $true 
+                }
+                if ($file -match "images/packer/teams/java") { 
+                  Write-Host "  -> Matched java pattern!" -ForegroundColor Green
+                  $buildJava = $true 
+                }
+                if ($file -match "images/packer/teams/dotnet") { 
+                  Write-Host "  -> Matched dotnet pattern!" -ForegroundColor Green
+                  $buildDotNet = $true 
+                }
+                if ($file -match "images/packer/teams/datascience") { 
+                  Write-Host "  -> Matched datascience pattern!" -ForegroundColor Green
+                  $buildDataScience = $true 
+                }
+                if ($file -match "images/definitions/devbox-definitions.json") {
+                  Write-Host "  -> Matched definitions! Rebuilding all images" -ForegroundColor Green
                   # If definitions changed, rebuild all
                   $buildVSCode = $true
                   $buildJava = $true
@@ -127,17 +154,24 @@ stages:
                 }
               }
               
-              Write-Host "Images to build:"
-              Write-Host "  VSCode: $buildVSCode"
-              Write-Host "  Java: $buildJava"
-              Write-Host "  .NET: $buildDotNet"
-              Write-Host "  DataScience: $buildDataScience"
+              Write-Host ""
+              Write-Host "=== Build Decisions ===" -ForegroundColor Cyan
+              Write-Host "  VSCode: $buildVSCode" -ForegroundColor $(if($buildVSCode){'Green'}else{'Gray'})
+              Write-Host "  Java: $buildJava" -ForegroundColor $(if($buildJava){'Green'}else{'Gray'})
+              Write-Host "  .NET: $buildDotNet" -ForegroundColor $(if($buildDotNet){'Green'}else{'Gray'})
+              Write-Host "  DataScience: $buildDataScience" -ForegroundColor $(if($buildDataScience){'Green'}else{'Gray'})
+              Write-Host ""
               
               # Set output variables
+              Write-Host "DEBUG: Setting output variables" -ForegroundColor Yellow
               Write-Host "##vso[task.setvariable variable=buildVSCode;isOutput=true]$buildVSCode"
+              Write-Host "DEBUG: Set buildVSCode = $buildVSCode" -ForegroundColor Yellow
               Write-Host "##vso[task.setvariable variable=buildJava;isOutput=true]$buildJava"
+              Write-Host "DEBUG: Set buildJava = $buildJava" -ForegroundColor Yellow
               Write-Host "##vso[task.setvariable variable=buildDotNet;isOutput=true]$buildDotNet"
+              Write-Host "DEBUG: Set buildDotNet = $buildDotNet" -ForegroundColor Yellow
               Write-Host "##vso[task.setvariable variable=buildDataScience;isOutput=true]$buildDataScience"
+              Write-Host "DEBUG: Set buildDataScience = $buildDataScience" -ForegroundColor Yellow
             name: detectChanges
             displayName: 'Detect Changed Images'
       
@@ -162,17 +196,19 @@ stages:
               imageType: 'datascience'
               imageFile: 'datascience-devbox.pkr.hcl'
               shouldBuild: $[ dependencies.DetermineChangedImages.outputs['detectChanges.buildDataScience'] ]
-        condition: eq(variables['shouldBuild'], 'true')
         timeoutInMinutes: 120
         steps:
           - checkout: self
+            condition: eq(variables['shouldBuild'], 'True')
           
           - task: PackerInstaller@1
+            condition: eq(variables['shouldBuild'], 'True')
             inputs:
               version: 'latest'
             displayName: 'Install Packer'
           
           - task: AzureCLI@2
+            condition: eq(variables['shouldBuild'], 'True')
             inputs:
               azureSubscription: 'DevBox-Images-ServiceConnection'
               scriptType: 'pscore'
@@ -194,7 +230,7 @@ stages:
                 Write-Host ""
                 
                 # Set working directory
-                Set-Location "$(Build.SourcesDirectory)/packer/teams"
+                Set-Location "$(Build.SourcesDirectory)/images/packer/teams"
                 
                 # Initialize Packer
                 Write-Host "Initializing Packer..." -ForegroundColor Cyan
@@ -204,15 +240,11 @@ stages:
                 Write-Host "Building $(imageType) image..." -ForegroundColor Cyan
                 packer build `
                   -var "subscription_id=$env:ARM_SUBSCRIPTION_ID" `
-                  -var "client_id=$env:ARM_CLIENT_ID" `
-                  -var "client_secret=$env:ARM_CLIENT_SECRET" `
-                  -var "tenant_id=$env:ARM_TENANT_ID" `
+                  -var "resource_group_name=$($env.galleryResourceGroup)" `
                   -var "gallery_name=$($env.galleryName)" `
-                  -var "gallery_resource_group=$($env.galleryResourceGroup)" `
-                  -var "baseline_image_name=$($env.baselineImageName)" `
+                  -var "baseline_image_version=1.0.0" `
                   -var "image_version=$(imageVersion)" `
-                  -var "build_id=$(Build.BuildId)" `
-                  -var "image_type=$(imageType)" `
+                  -var "location=$($env.region)" `
                   $(imageFile)
                 
                 if ($LASTEXITCODE -ne 0) {
@@ -221,13 +253,10 @@ stages:
                 }
                 
                 Write-Host ""
-                Write-Host "✓ $(imageType) image built successfully" -ForegroundColor Green
+                Write-Host ("[SUCCESS] {0} image built successfully" -f "$(imageType)") -ForegroundColor Green
             displayName: 'Build $(imageType) Image'
             env:
               ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-              ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-              ARM_TENANT_ID: $(ARM_TENANT_ID)
 
   - stage: PublishManifest
     displayName: 'Publish Image Manifest'
