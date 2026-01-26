@@ -164,19 +164,19 @@ Link DevCenter projects to organizational cost centers for accurate chargeback a
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    Cost Center Assignment Model                      │
+│                    Cost Center Assignment Model                     │
 ├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Project: devbox-standard          Project: devbox-datascience       │
+│                                                                     │
+│  Project: devbox-standard          Project: devbox-datascience      │
 │  ├── CostCenter: CC-1001          ├── CostCenter: CC-2001           │
-│  ├── Department: Engineering      ├── Department: Analytics          │
+│  ├── Department: Engineering      ├── Department: Analytics         │
 │  └── Budget: $3,000/month         └── Budget: $5,000/month          │
-│                                                                      │
-│  Project: devbox-power                                               │
+│                                                                     │
+│  Project: devbox-power                                              │
 │  ├── CostCenter: CC-1001                                            │
-│  ├── Department: Engineering                                         │
+│  ├── Department: Engineering                                        │
 │  └── Budget: $2,000/month                                           │
-│                                                                      │
+│                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
