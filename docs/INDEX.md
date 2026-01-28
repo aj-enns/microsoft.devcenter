@@ -11,6 +11,8 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 | [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md) | **Enterprise deployment** - Azure DevOps + TFE | Operations & Dev Teams | 1-2 hours |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Design decisions** - Why it's built this way | Technical Leads, Architects | 20 min |
 | [WORKFLOWS.md](WORKFLOWS.md) | **Visual diagrams** - How it all works together | Everyone | 15 min |
+| [RACI-MATRIX.md](RACI-MATRIX.md) | **Roles & Responsibilities** - Who does what | Managers, All Teams | 20 min |
+| [OPERATIONS-GUIDE.md](OPERATIONS-GUIDE.md) | **Day-to-day operations** - Runbooks, schedules, procedures | Operations Teams | 30 min |
 
 ## 🚀 Getting Started
 
