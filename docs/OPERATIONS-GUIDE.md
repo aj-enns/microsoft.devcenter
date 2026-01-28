@@ -48,6 +48,8 @@ This Operations Guide provides detailed procedures, schedules, and runbooks for 
 | Security baseline enforcement | Business application testing |
 | Cost monitoring and optimization | Individual developer workflows |
 
+> **For Developers:** If you're a developer building or maintaining team images, see the [Developer Image Guide](DEVELOPER-IMAGE-GUIDE.md) for build procedures, testing, and troubleshooting.
+
 ### Shared Responsibility Model
 
 Per [Microsoft CAF guidance](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/manage/ready-cloud-operations), monitoring responsibilities are split between **Central (Platform)** and **Workload** teams:
