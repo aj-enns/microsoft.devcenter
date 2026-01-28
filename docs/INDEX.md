@@ -11,7 +11,8 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 | [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md) | **Enterprise deployment** - Azure DevOps + TFE | Operations & Dev Teams | 1-2 hours |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Design decisions** - Why it's built this way | Technical Leads, Architects | 20 min |
 | [WORKFLOWS.md](WORKFLOWS.md) | **Visual diagrams** - How it all works together | Everyone | 15 min |
-
+| [RACI-MATRIX.md](RACI-MATRIX.md) | **Roles & Responsibilities** - Who does what | Managers, All Teams | 20 min |
+| [OPERATIONS-GUIDE.md](OPERATIONS-GUIDE.md) | **Day-to-day operations** - Runbooks, schedules, procedures | Operations Teams | 30 min || [DEVELOPER-IMAGE-GUIDE.md](DEVELOPER-IMAGE-GUIDE.md) | **Image development** - Build, test, deploy custom images | Development Teams | 25 min |
 ## 🚀 Getting Started
 
 ### I want to... deploy infrastructure
@@ -20,8 +21,9 @@ Welcome to the DevBox Multi-Images and Roles documentation! This index will help
 → Reference [infrastructure/scripts/](../infrastructure/scripts/)
 
 ### I want to... build a custom image
-→ Start with [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md)  
-→ Then read [README.md - Development Team Workflow](../README.md#development-team-workflow)  
+→ Start with [DEVELOPER-IMAGE-GUIDE.md](DEVELOPER-IMAGE-GUIDE.md) for complete procedures  
+→ Review [WORKFLOWS.md](WORKFLOWS.md) for visual workflow diagrams  
+→ Reference [INSTALL-CLI.md](INSTALL-CLI.md) or [INSTALL-ADO-TFE.md](INSTALL-ADO-TFE.md) for initial setup  
 → Example: [images/packer/teams/vscode-devbox.pkr.hcl](../images/packer/teams/vscode-devbox.pkr.hcl)
 
 ### I want to... understand the architecture
