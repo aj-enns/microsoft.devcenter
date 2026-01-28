@@ -1,7 +1,7 @@
 # RACI Matrix - Microsoft DevCenter Solution
 
-**Document Version:** 1.0  
-**Last Updated:** January 26, 2026  
+**Document Version:** 1.1  
+**Last Updated:** January 28, 2026  
 **Classification:** Internal  
 **Status:** Draft
 
@@ -27,7 +27,9 @@
 
 ## Overview
 
-This RACI document defines the roles and responsibilities for managing the Microsoft DevCenter (Dev Box) solution across four key teams. The matrix ensures clear accountability, reduces ambiguity, and supports compliance requirements.
+This RACI document defines the roles and responsibilities for managing the Microsoft DevCenter (Dev Box) solution across six key teams. The matrix ensures clear accountability, reduces ambiguity, and supports compliance requirements.
+
+> **Note:** This document distinguishes between **Engineering Teams** (operational/OpEx) and **Business Platform Teams** (project/CapEx) to properly reflect budget ownership and financial approval authority. It also separates **Information Governance (IG)** responsibilities from **Security** to ensure proper data classification authority.
 
 ### Purpose
 
@@ -77,31 +79,56 @@ flowchart TB
             INFRA["🔧 Infrastructure Team"]
             SEC["🔒 Security Team"]
             END["💻 Endpoint Team"]
+            IG["📋 Info Governance Team"]
         end
         
         subgraph BU["Business Units"]
-            DEV["👨‍💻 Development Teams"]
-            PM["📊 Project Managers"]
-            FIN["💰 Finance/Chargeback"]
+            direction TB
+            subgraph ENG["Engineering Teams (OpEx)"]
+                ENGDEV["👨‍💻 Dev Teams"]
+                ENGOPS["⚙️ Operations"]
+            end
+            subgraph BPT["Business Platform Teams (CapEx)"]
+                PROJ["📊 Project Teams"]
+                PLAT["🏗️ Platform Teams"]
+                FIN["💰 Finance"]
+            end
         end
     end
     
     INFRA --> |"Manages"| DC["DevCenter"]
     INFRA --> |"Manages"| NET["Networking"]
-    SEC --> |"Enforces"| POL["Policies"]
+    SEC --> |"Enforces"| POL["Security Controls"]
+    IG --> |"Classifies"| DATA["Data Assets"]
     END --> |"Manages"| IMG["Images"]
     END --> |"Manages"| INT["Intune"]
-    DEV --> |"Consumes"| DB["Dev Boxes"]
+    ENGDEV --> |"Consumes"| DB["Dev Boxes"]
+    PROJ --> |"Funds/Owns"| DB
 ```
 
 ### Team Responsibilities Summary
 
-| Team | Primary Domain | Key Systems |
-|------|---------------|-------------|
-| **Infrastructure Team** | Azure resources, networking, Terraform deployment | DevCenter, VNet, Azure Compute Gallery, Terraform State |
-| **Endpoint Team** | Device management, image lifecycle, Intune policies | Packer images, Intune, Dev Box definitions |
-| **Security Team** | Security policies, compliance, access controls | Entra ID, RBAC, NSG, Defender, Conditional Access |
-| **Business Units** | Requirements, consumption, budget ownership | Dev Box usage, project requirements, cost centers |
+| Team | Primary Domain | Key Systems | Budget Type |
+|------|---------------|-------------|-------------|
+| **Infrastructure Team** | Azure resources, networking, Terraform deployment | DevCenter, VNet, Azure Compute Gallery, Terraform State | IT OpEx |
+| **Endpoint Team** | Device management, image lifecycle, Intune policies | Packer images, Intune, Dev Box definitions | IT OpEx |
+| **Security Team** | Security policies, compliance, access controls | Entra ID, RBAC, NSG, Defender, Conditional Access | IT OpEx |
+| **Info Governance (IG) Team** | Data classification, information policies, retention | Data Catalog, Classification Labels, Retention Policies | IT OpEx |
+| **Engineering Teams** | Day-to-day development, operational tasks, bug fixes | Dev Box usage, operational tooling | **OpEx** (non-project) |
+| **Business Platform Teams** | Project delivery, platform development, strategic initiatives | Dev Box usage, project requirements, cost centers | **CapEx** (project-based) |
+
+### Budget Ownership Distinction
+
+> **Important:** The distinction between Engineering Teams and Business Platform Teams is critical for financial accountability:
+>
+> | Aspect | Engineering Teams (OpEx) | Business Platform Teams (CapEx) |
+> |--------|--------------------------|----------------------------------|
+> | **Budget Type** | Operational expenditure | Capital expenditure |
+> | **Funding Model** | IT cost center allocation | Project-based funding |
+> | **Approval Authority** | Engineering Manager | Project Sponsor / Platform Owner |
+> | **Cost Recovery** | Shared services chargeback | Direct project allocation |
+> | **Financial Planning** | Annual IT budget cycle | Project business case |
+> | **SKU Governance** | Standard tier (pre-approved) | Can request premium tiers |
 
 ---
 
@@ -111,112 +138,126 @@ flowchart TB
 
 Activities related to core Azure infrastructure deployment and management.
 
-| Activity | Infrastructure | Endpoint | Security | Business Units |
-|----------|:-------------:|:--------:|:--------:|:--------------:|
-| **DevCenter Deployment** | A/R | I | C | I |
-| **Project Creation** | A/R | I | C | C |
-| **Virtual Network Design** | A/R | C | C | I |
-| **Network Connections Setup** | A/R | C | C | I |
-| **Azure Compute Gallery Management** | A/R | C | I | I |
-| **Terraform State Management** | A/R | I | C | - |
-| **Infrastructure Monitoring** | A/R | I | C | I |
-| **Capacity Planning** | A/R | C | I | C |
-| **Disaster Recovery Planning** | A/R | C | C | I |
-| **Azure Region Selection** | A/R | C | C | C |
-| **Resource Tagging Strategy** | A/R | R | C | C |
+| Activity | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|----------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| **DevCenter Deployment** | A/R | I | C | - | I | I |
+| **Project Creation** | A/R | I | C | - | C | C |
+| **Virtual Network Design** | A/R | C | C | - | I | I |
+| **Network Connections Setup** | A/R | C | C | - | I | I |
+| **Azure Compute Gallery Management** | A/R | C | I | - | I | I |
+| **Terraform State Management** | A/R | I | C | - | - | - |
+| **Infrastructure Monitoring** | A/R | I | C | - | I | I |
+| **Capacity Planning** | A/R | C | I | - | C | C |
+| **Disaster Recovery Planning** | A/R | C | C | - | I | C |
+| **Azure Region Selection** | A/R | C | C | C | C | C |
+| **Resource Tagging Strategy** | A/R | R | C | C | C | C |
 
 ### Security & Compliance
 
 Activities related to security controls, compliance, and access management.
 
-| Activity | Infrastructure | Endpoint | Security | Business Units |
-|----------|:-------------:|:--------:|:--------:|:--------------:|
-| **Security Baseline Definition** | C | R | A/R | I |
-| **RBAC Configuration** | R | I | A/R | C |
-| **Conditional Access Policies** | I | C | A/R | I |
-| **Network Security Groups (NSG)** | R | I | A/R | I |
-| **Defender Configuration** | C | R | A/R | I |
-| **Security Incident Response** | R | R | A/R | I |
-| **Vulnerability Assessment** | C | R | A/R | I |
-| **Compliance Audits** | R | R | A/R | C |
-| **Service Principal Management** | R | C | A/R | I |
-| **Secret/Key Rotation** | R | C | A/R | I |
-| **MFA Enforcement** | I | I | A/R | I |
-| **Data Classification** | I | I | A/R | C |
-| **Security Exception Requests** | C | C | A/R | R |
+> **Note:** Data Classification is owned by the Information Governance (IG) team. Security defines the controls that apply to each classification level but does not assign classifications.
+
+| Activity | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|----------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| **Security Baseline Definition** | C | R | A/R | C | I | I |
+| **RBAC Configuration** | R | I | A/R | - | C | C |
+| **Conditional Access Policies** | I | C | A/R | - | I | I |
+| **Network Security Groups (NSG)** | R | I | A/R | - | I | I |
+| **Defender Configuration** | C | R | A/R | - | I | I |
+| **Security Incident Response** | R | R | A/R | C | I | I |
+| **Vulnerability Assessment** | C | R | A/R | - | I | I |
+| **Compliance Audits** | R | R | A/R | R | C | C |
+| **Service Principal Management** | R | C | A/R | - | I | I |
+| **Secret/Key Rotation** | R | C | A/R | - | I | I |
+| **MFA Enforcement** | I | I | A/R | - | I | I |
+| **Data Classification** | I | I | C | A/R | C | C |
+| **Security Controls per Classification** | C | R | A/R | C | I | I |
+| **Security Exception Requests** | C | C | A/R | C | R | R |
+| **Data Retention Policy** | I | C | C | A/R | C | C |
+| **Information Handling Standards** | I | C | R | A/R | C | C |
 
 ### Cost Management
 
 Activities related to financial governance, budgeting, and cost optimization.
 
-| Activity | Infrastructure | Endpoint | Security | Business Units |
-|----------|:-------------:|:--------:|:--------:|:--------------:|
-| **Budget Definition** | C | I | I | A/R |
-| **Cost Center Assignment** | R | I | I | A/R |
-| **SKU Governance (VM Sizes)** | R | C | C | A/C |
-| **Azure Budget Alerts Setup** | A/R | I | I | C |
-| **Cost Allocation/Chargeback** | R | I | I | A/R |
-| **Reserved Instance Purchasing** | A/R | I | I | C |
-| **Auto-Stop Schedule Definition** | C | R | I | A/C |
-| **Usage Reporting** | R | R | I | A/I |
-| **Cost Optimization Reviews** | R | R | I | A/C |
-| **Pool Access Based on Cost Tier** | R | C | C | A/C |
-| **Max Dev Boxes Per User Limit** | R | I | C | A/C |
+> **Important:** Budget ownership differs between Engineering Teams (OpEx) and Business Platform Teams (CapEx):
+> - **Engineering Teams:** Budget allocated through IT shared services; Engineering Manager approves within allocation
+> - **Business Platform Teams:** Budget tied to project/platform funding; Project Sponsor/Platform Owner has approval authority
+
+| Activity | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|----------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| **OpEx Budget Definition** | C | I | I | - | A/R | I |
+| **CapEx Budget Definition** | C | I | I | - | I | A/R |
+| **Cost Center Assignment** | R | I | I | - | A/C | A/R |
+| **SKU Governance (VM Sizes)** | R | C | C | - | C | A/C |
+| **Premium SKU Request** | R | C | C | - | - | A/R |
+| **Azure Budget Alerts Setup** | A/R | I | I | - | C | C |
+| **Cost Allocation/Chargeback** | R | I | I | - | A/I | A/R |
+| **Reserved Instance Purchasing** | A/R | I | I | - | C | C |
+| **Auto-Stop Schedule Definition** | C | R | I | - | A/C | A/C |
+| **Usage Reporting** | R | R | I | - | A/I | A/I |
+| **Cost Optimization Reviews** | R | R | I | - | A/C | A/C |
+| **Pool Access Based on Cost Tier** | R | C | C | - | C | A/C |
+| **Max Dev Boxes Per User Limit** | R | I | C | - | A/C | A/C |
+| **Project Cost Tracking** | R | I | I | - | I | A/R |
+| **Budget Overrun Escalation** | I | I | I | - | A/R | A/R |
 
 ### Governance
 
 Activities related to policies, standards, and operational governance.
 
-| Activity | Infrastructure | Endpoint | Security | Business Units |
-|----------|:-------------:|:--------:|:--------:|:--------------:|
-| **CODEOWNERS Management** | A/R | R | C | I |
-| **Change Management Process** | A/R | R | C | C |
-| **Approval Workflows** | R | R | A/R | C |
-| **Documentation Standards** | R | R | R | A/I |
-| **SLA Definition** | A/R | C | C | C |
-| **Service Catalog Management** | A/R | R | C | C |
-| **Policy as Code Enforcement** | A/R | C | R | I |
-| **Naming Convention Standards** | A/R | R | C | I |
-| **Environment Lifecycle Policy** | A/R | R | C | C |
-| **Decommissioning Process** | R | R | A/C | C |
-| **Audit Trail Management** | R | C | A/R | I |
+| Activity | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|----------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| **CODEOWNERS Management** | A/R | R | C | - | I | I |
+| **Change Management Process** | A/R | R | C | C | C | C |
+| **Approval Workflows** | R | R | A/R | C | C | C |
+| **Documentation Standards** | R | R | R | A/R | I | I |
+| **SLA Definition** | A/R | C | C | - | C | C |
+| **Service Catalog Management** | A/R | R | C | - | C | C |
+| **Policy as Code Enforcement** | A/R | C | R | C | I | I |
+| **Naming Convention Standards** | A/R | R | C | C | I | I |
+| **Environment Lifecycle Policy** | A/R | R | C | C | C | C |
+| **Decommissioning Process** | R | R | A/C | C | C | C |
+| **Audit Trail Management** | R | C | A/R | R | I | I |
+| **Information Lifecycle Management** | C | C | C | A/R | C | C |
 
 ### Resiliency & Operations
 
 Activities related to reliability, availability, and operational continuity.
 
-| Activity | Infrastructure | Endpoint | Security | Business Units |
-|----------|:-------------:|:--------:|:--------:|:--------------:|
-| **High Availability Design** | A/R | C | C | I |
-| **Backup Strategy** | A/R | C | C | I |
-| **Incident Management** | A/R | R | R | I |
-| **Problem Management** | A/R | R | C | C |
-| **Service Health Monitoring** | A/R | R | I | I |
-| **Performance Monitoring** | A/R | R | I | C |
-| **Patch Management Strategy** | C | A/R | R | I |
-| **Image Update Scheduling** | C | A/R | C | C |
-| **Failover Testing** | A/R | R | C | I |
-| **RTO/RPO Definition** | A/R | C | C | C |
-| **On-Call Rotation** | A/R | R | R | I |
-| **Root Cause Analysis** | R | R | R | A/I |
+| Activity | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|----------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| **High Availability Design** | A/R | C | C | - | I | C |
+| **Backup Strategy** | A/R | C | C | C | I | C |
+| **Incident Management** | A/R | R | R | I | I | I |
+| **Problem Management** | A/R | R | C | - | C | C |
+| **Service Health Monitoring** | A/R | R | I | - | I | I |
+| **Performance Monitoring** | A/R | R | I | - | C | C |
+| **Patch Management Strategy** | C | A/R | R | - | I | I |
+| **Image Update Scheduling** | C | A/R | C | - | C | C |
+| **Failover Testing** | A/R | R | C | - | I | C |
+| **RTO/RPO Definition** | A/R | C | C | C | C | C |
+| **On-Call Rotation** | A/R | R | R | - | I | I |
+| **Root Cause Analysis** | R | R | R | C | I | A/I |
 
 ### Image Management
 
 Activities specific to Dev Box image creation and lifecycle management.
 
-| Activity | Infrastructure | Endpoint | Security | Business Units |
-|----------|:-------------:|:--------:|:--------:|:--------------:|
-| **Base Image Creation** | C | A/R | R | I |
-| **Security Baseline in Images** | I | R | A/R | I |
-| **Team Image Customization** | I | A/R | C | R |
-| **Image Testing & Validation** | I | A/R | R | C |
-| **Image Publishing to Gallery** | R | A/R | C | I |
-| **Image Deprecation** | C | A/R | C | I |
-| **DevBox Definition Management** | C | A/R | I | C |
-| **Pool Creation & Configuration** | A/R | C | C | C |
-| **Intune Policy Configuration** | I | A/R | R | I |
-| **Software License Compliance** | I | R | C | A/R |
-| **Application Packaging** | I | A/R | C | R |
+| Activity | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|----------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| **Base Image Creation** | C | A/R | R | - | I | I |
+| **Security Baseline in Images** | I | R | A/R | - | I | I |
+| **Team Image Customization** | I | A/R | C | - | R | R |
+| **Image Testing & Validation** | I | A/R | R | - | C | C |
+| **Image Publishing to Gallery** | R | A/R | C | - | I | I |
+| **Image Deprecation** | C | A/R | C | - | I | I |
+| **DevBox Definition Management** | C | A/R | I | - | C | C |
+| **Pool Creation & Configuration** | A/R | C | C | - | C | C |
+| **Intune Policy Configuration** | I | A/R | R | - | I | I |
+| **Software License Compliance** | I | R | C | - | A/C | A/R |
+| **Application Packaging** | I | A/R | C | - | R | R |
 
 ---
 
@@ -257,8 +298,10 @@ flowchart TD
 |----------|--------------|-----------------|
 | Security Incident | Security Team | Security → CISO → Executive |
 | Service Outage | Infrastructure Team | Infra → IT Director → CIO |
-| Budget Overrun | Business Unit | BU → Finance → CFO |
+| OpEx Budget Overrun | Engineering Team | Eng Manager → IT Director → CIO |
+| CapEx Budget Overrun | Business Platform Team | Project Sponsor → Portfolio Mgmt → CFO |
 | Compliance Violation | Security Team | Security → Compliance → Legal |
+| Data Classification Dispute | Info Governance Team | IG → Data Officer → Legal |
 | Image Build Failure | Endpoint Team | Endpoint → Infra → IT Director |
 | Access Request Denied | Security Team | Security → IT Director → BU Director |
 
@@ -394,7 +437,9 @@ flowchart LR
         INF["Infrastructure Lead"]
         SEC["Security Lead"]
         END["Endpoint Lead"]
-        BU["BU Representative"]
+        IG["Info Governance Rep"]
+        ENG["Engineering Rep"]
+        BPT["Platform Team Rep"]
     end
     
     CHAIR --> |"Facilitates"| REVIEW["Change Review"]
@@ -410,16 +455,18 @@ flowchart LR
 
 ### Approval Matrix by Change Type
 
-| Change Type | Infrastructure | Endpoint | Security | Business Unit |
-|-------------|:-------------:|:--------:|:--------:|:-------------:|
-| New DevCenter Project | A | I | C | R |
-| Network Configuration | A | I | C | I |
-| New Dev Box Pool | C | A | C | R |
-| Image Security Update | I | R | A | I |
-| RBAC Permission Change | R | I | A | C |
-| Budget Increase Request | I | I | I | A |
-| New Team Image | I | A | C | R |
-| Emergency Security Patch | R | R | A | I |
+| Change Type | Infrastructure | Endpoint | Security | Info Governance | Engineering Teams | Business Platform Teams |
+|-------------|:-------------:|:--------:|:--------:|:---------------:|:-----------------:|:----------------------:|
+| New DevCenter Project | A | I | C | - | C | R |
+| Network Configuration | A | I | C | - | I | I |
+| New Dev Box Pool | C | A | C | - | R | R |
+| Image Security Update | I | R | A | - | I | I |
+| RBAC Permission Change | R | I | A | - | C | C |
+| OpEx Budget Increase | I | I | I | - | A | - |
+| CapEx Budget Increase | I | I | I | - | - | A |
+| New Team Image | I | A | C | - | R | R |
+| Emergency Security Patch | R | R | A | - | I | I |
+| Data Classification Change | I | I | C | A | C | C |
 
 ---
 
@@ -430,11 +477,13 @@ flowchart LR
 | Meeting | Frequency | Attendees | Purpose |
 |---------|-----------|-----------|---------|
 | **Operations Standup** | Daily | Infra, Endpoint | Daily operational health |
-| **Security Review** | Weekly | Security, Infra Lead, Endpoint Lead | Security posture review |
-| **Cost Review** | Monthly | All teams + Finance | Budget tracking & optimization |
-| **CAB Meeting** | Bi-weekly | CAB members | Change approvals |
+| **Security Review** | Weekly | Security, Infra Lead, Endpoint Lead, IG Lead | Security posture review |
+| **Cost Review (OpEx)** | Monthly | IT teams + Engineering Leads | IT operational budget tracking |
+| **Cost Review (CapEx)** | Monthly | IT teams + Platform/Project Leads + Finance | Project/platform budget tracking |
+| **CAB Meeting** | Bi-weekly | CAB members (all 7 representatives) | Change approvals |
+| **Data Governance Review** | Monthly | IG, Security, Compliance | Data classification & handling |
 | **Governance Review** | Quarterly | Directors + All Leads | Policy & compliance review |
-| **Business Review** | Quarterly | IT Leadership + BU Directors | Strategic alignment |
+| **Business Review** | Quarterly | IT Leadership + Engineering + Platform Directors | Strategic alignment |
 
 ### Communication Channels
 
@@ -480,14 +529,32 @@ flowchart TD
 | Compliance audit scheduled | Coordinate evidence collection | All teams |
 | Vulnerability disclosed | Assess impact, coordinate patching | Endpoint, Infrastructure |
 
-### Business Unit Quick Reference
+### Info Governance Team Quick Reference
 
 | When... | Action | Inform |
 |---------|--------|--------|
-| New Dev Box needed | Submit request with justification | Infrastructure |
-| Budget concern | Escalate to Finance | Infrastructure |
+| Data classification needed | Assess and assign classification | Security (for controls) |
+| Retention policy change | Update policy, communicate | All teams |
+| Classification dispute | Review and adjudicate | Requestor, Security |
+| New data type identified | Classify and define handling | Security, Endpoint |
+
+### Engineering Teams Quick Reference (OpEx)
+
+| When... | Action | Inform |
+|---------|--------|--------|
+| New Dev Box needed | Submit request (standard tier) | Infrastructure |
+| OpEx budget concern | Escalate to Engineering Manager | IT Director |
 | Access issue | Contact Security via ticket | Security |
-| New requirements | Submit through intake process | All IT teams |
+| Operational requirements | Submit through IT intake | All IT teams |
+
+### Business Platform Teams Quick Reference (CapEx)
+
+| When... | Action | Inform |
+|---------|--------|--------|
+| New Dev Box needed | Submit request with project justification | Infrastructure, Finance |
+| Premium SKU needed | Submit business case to Project Sponsor | Infrastructure, Finance |
+| CapEx budget concern | Escalate to Project Sponsor | Portfolio Management |
+| Project requirements | Submit through project intake | All IT teams |
 
 ---
 
@@ -495,8 +562,7 @@ flowchart TD
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | January 26, 2026 | Operations Team | Initial release |
-
+| 1.0 | January 26, 2026 | Operations Team | Initial release || 1.1 | January 28, 2026 | Operations Team | Split Business Units into Engineering Teams (OpEx) and Business Platform Teams (CapEx); Added Information Governance (IG) team for data classification; Updated all RACI matrices to 6-team model; Added budget ownership distinction; Updated CAB composition |
 ---
 
 ## Related Documents
