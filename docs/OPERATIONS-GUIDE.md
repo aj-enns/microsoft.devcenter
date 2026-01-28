@@ -26,6 +26,8 @@
 
 This Operations Guide provides detailed procedures, schedules, and runbooks for the day-to-day management of the Microsoft DevCenter (Dev Box) solution. It complements the [RACI Matrix](RACI-MATRIX.md) by providing the "how" to the RACI's "who."
 
+> **Microsoft Best Practice Alignment:** This guide follows the [Microsoft Cloud Adoption Framework (CAF) Manage methodology](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/manage/) and the **RAMP approach** (Ready, Administer, Monitor, Protect) for cloud operations.
+
 ### Purpose
 
 - Define recurring operational tasks and schedules
@@ -33,6 +35,8 @@ This Operations Guide provides detailed procedures, schedules, and runbooks for 
 - Establish monitoring and alerting procedures
 - Document incident response procedures
 - Track operational metrics and KPIs
+- **Automate repetitive work** to reduce manual effort and errors
+- **Enable continuous improvement** through regular operational reviews
 
 ### Scope
 
@@ -43,6 +47,18 @@ This Operations Guide provides detailed procedures, schedules, and runbooks for 
 | Pool provisioning and maintenance | End-user Dev Box usage |
 | Security baseline enforcement | Business application testing |
 | Cost monitoring and optimization | Individual developer workflows |
+
+### Shared Responsibility Model
+
+Per [Microsoft CAF guidance](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/manage/ready-cloud-operations), monitoring responsibilities are split between **Central (Platform)** and **Workload** teams:
+
+| Monitoring Area | Central Team Responsibilities | Workload Team Responsibilities |
+|-----------------|------------------------------|--------------------------------|
+| **Service Health** | Monitor overall platform health, SLA reporting | Monitor workload-specific resource health |
+| **Security** | Define standards, enterprise threat detection | Implement workload-specific security monitoring |
+| **Compliance** | Establish policies via Azure Policy | Ensure workload compliance with central policies |
+| **Cost** | Set budgets, enterprise-wide cost reporting | Optimize workload-specific spending |
+| **Resources** | Monitor shared services, set standard rules | Configure workload-specific logs and dashboards |
 
 ---
 
@@ -550,19 +566,47 @@ SecurityRecommendation
 
 ## Monitoring & Alerting
 
+> **Microsoft Best Practice:** Use [Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/overview) as your central monitoring platform. Configure [Azure Monitor Baseline Alerts (AMBA)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/landing-zone/design-area/management-monitor) as a starting point.
+
+### Monitoring Strategy (Per CAF)
+
+```mermaid
+flowchart TB
+    subgraph Central["Central Platform Monitoring"]
+        SH["Azure Service Health"]
+        RH["Azure Resource Health"]
+        DEF["Microsoft Defender for Cloud"]
+        SEN["Microsoft Sentinel"]
+        CM["Microsoft Cost Management"]
+    end
+    
+    subgraph Workload["Workload Monitoring"]
+        AM["Azure Monitor Metrics"]
+        LA["Log Analytics Workspace"]
+        AI["Application Insights"]
+    end
+    
+    Central --> |"Alerts"| AG["Action Groups"]
+    Workload --> |"Alerts"| AG
+    AG --> |"Notify"| ITSM["ITSM/ServiceNow"]
+    AG --> |"Auto-remediate"| AUTO["Azure Automation"]
+```
+
 ### Alert Configuration
 
-| Alert Name | Condition | Severity | Team |
-|------------|-----------|----------|------|
-| DevCenter Unhealthy | Health != Healthy | Critical | Infrastructure |
-| Pool Capacity Warning | Utilization > 70% | Warning | Infrastructure |
-| Pool Capacity Critical | Utilization > 85% | Critical | Infrastructure |
-| Image Build Failure | Build Status = Failed | High | Endpoint |
-| Network Connection Unhealthy | Health Check Failed | Critical | Infrastructure |
-| Cost Anomaly | Spend > 120% forecast | Medium | Infrastructure + BU |
-| Security Baseline Drift | Compliance < 95% | High | Security |
-| Failed Sign-ins Spike | > 50 in 1 hour | High | Security |
-| Defender Alert | Any High/Critical | High | Security |
+> **Note:** Use [dynamic thresholds](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-dynamic-thresholds) where possible to reduce false positives.
+
+| Alert Name | Condition | Severity | Team | Azure Monitor Rule Type |
+|------------|-----------|----------|------|------------------------|
+| DevCenter Unhealthy | Health != Healthy | Critical | Infrastructure | Resource Health |
+| Pool Capacity Warning | Utilization > 70% | Warning | Infrastructure | Metric (dynamic) |
+| Pool Capacity Critical | Utilization > 85% | Critical | Infrastructure | Metric |
+| Image Build Failure | Build Status = Failed | High | Endpoint | Log Search |
+| Network Connection Unhealthy | Health Check Failed | Critical | Infrastructure | Resource Health |
+| Cost Anomaly | Spend > 120% forecast | Medium | Infrastructure + BU | Cost Management |
+| Security Baseline Drift | Compliance < 95% | High | Security | Azure Policy |
+| Failed Sign-ins Spike | > 50 in 1 hour | High | Security | Microsoft Sentinel |
+| Defender Alert | Any High/Critical | High | Security | Defender for Cloud |
 
 ### Monitoring Dashboards
 
@@ -598,14 +642,23 @@ AzureMetrics
 
 ## Incident Management
 
+> **Microsoft Best Practice:** Follow the [Well-Architected Framework incident management guidance](https://learn.microsoft.com/en-us/azure/well-architected/design-guides/incident-management) and integrate with Azure Monitor for automated incident creation.
+
+### Incident Management Principles (Per Microsoft CAF)
+
+1. **Prioritize recovery over discovery** - Restore operations quickly, investigate root cause later
+2. **Automate detection and response** - Use Azure Automation runbooks for common remediation
+3. **Maintain clear communication** - Designate a communications manager during incidents
+4. **Conduct post-incident reviews** - Every incident is a learning opportunity
+
 ### Incident Classification
 
-| Priority | Impact | Response | Resolution Target |
-|----------|--------|----------|-------------------|
-| P1 - Critical | Service outage, all users affected | 15 min | 2 hours |
-| P2 - High | Major feature unavailable, many users | 30 min | 4 hours |
-| P3 - Medium | Partial degradation, some users | 2 hours | 8 hours |
-| P4 - Low | Minor issue, workaround available | 4 hours | 24 hours |
+| Priority | Impact | Response | Resolution Target | Communication Frequency |
+|----------|--------|----------|-------------------|------------------------|
+| P1 - Critical | Service outage, all users affected | 15 min | 2 hours | Every 15 min |
+| P2 - High | Major feature unavailable, many users | 30 min | 4 hours | Every 30 min |
+| P3 - Medium | Partial degradation, some users | 2 hours | 8 hours | Every 2 hours |
+| P4 - Low | Minor issue, workaround available | 4 hours | 24 hours | Daily |
 
 ### Incident Response Flow
 
@@ -665,6 +718,27 @@ Root Cause: <Brief RCA>
 Post-Incident Review: <Scheduled date/time>
 ```
 
+### Post-Incident Review (Blameless Retrospective)
+
+> **Microsoft Best Practice:** Conduct retrospectives after every incident. The goal is to identify actionable improvements, not assign blame.
+
+**Review Template:**
+
+| Section | Content |
+|---------|----------|
+| **Incident Summary** | What happened, impact, duration |
+| **Timeline** | Key events with timestamps |
+| **What Went Well** | Effective responses, tools that helped |
+| **What Could Be Improved** | Gaps in detection, response, or communication |
+| **Action Items** | Specific improvements with owners and due dates |
+
+**Action Item Categories:**
+
+1. **Response Plan Enhancements** - Update processes or procedures
+2. **Observability Improvements** - Adjust thresholds, add monitoring, implement alerts
+3. **Workload Remediation** - Address vulnerabilities exposed during incident
+4. **Automation Opportunities** - Automate manual steps that slowed response
+
 ---
 
 ## Maintenance Windows
@@ -699,17 +773,28 @@ Post-Incident Review: <Scheduled date/time>
 
 ## Operational Metrics & KPIs
 
-### Service Level Objectives (SLOs)
+> **Microsoft Best Practice:** Define [Service Level Indicators (SLIs)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/cloud-scale-analytics/manage-observability) to measure service quality, and set [Service Level Objectives (SLOs)](https://learn.microsoft.com/en-us/azure/well-architected/reliability/metrics) as target values.
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| DevCenter Availability | 99.9% | Azure Monitor |
-| Pool Provisioning Success | 99% | Build logs |
-| Image Build Success Rate | 95% | CI/CD pipeline |
-| Mean Time to Provision | < 30 min | End-to-end timing |
-| Security Compliance Rate | > 98% | Defender for Cloud |
-| Incident Response (P1) | < 15 min | Ticketing system |
-| Incident Resolution (P1) | < 2 hours | Ticketing system |
+### Service Level Indicators (SLIs) → Objectives (SLOs)
+
+| SLI (What We Measure) | SLO (Target) | Measurement Tool | Error Budget |
+|-----------------------|--------------|------------------|---------------|
+| DevCenter Availability | 99.9% | Azure Service Health | 8.76 hrs/year |
+| Pool Provisioning Success Rate | 99% | Azure Monitor Logs | 1% failures allowed |
+| Image Build Success Rate | 95% | CI/CD Pipeline Metrics | 5% failures allowed |
+| Mean Time to Provision | < 30 min (p95) | Application Insights | 5% > 30 min allowed |
+| Security Compliance Rate | > 98% | Defender for Cloud | 2% non-compliance allowed |
+| Incident Response (P1) | < 15 min | ITSM System | SLA breach if exceeded |
+| Incident Resolution (P1) | < 2 hours | ITSM System | SLA breach if exceeded |
+
+### Availability Targets Reference
+
+| Objective | Noncompliance per Month | Noncompliance per Year |
+|-----------|------------------------|------------------------|
+| 99% | 7.20 hours | 3.65 days |
+| 99.9% | 43.20 minutes | 8.76 hours |
+| 99.95% | 21.60 minutes | 4.38 hours |
+| 99.99% | 4.32 minutes | 52.56 minutes |
 
 ### Monthly KPI Dashboard
 
@@ -753,6 +838,21 @@ Post-Incident Review: <Scheduled date/time>
 | Runbook Library | <internal-wiki-url> |
 | On-Call Schedule | <pagerduty-schedule-url> |
 
+### Azure Operations Tools Reference
+
+| Category | Tool | Purpose |
+|----------|------|----------|
+| **Central Monitoring** | [Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/overview) | Central telemetry collection platform |
+| **Service Health** | [Azure Service Health](https://learn.microsoft.com/en-us/azure/service-health/overview) | Platform outages and maintenance alerts |
+| **Resource Health** | [Azure Resource Health](https://learn.microsoft.com/en-us/azure/service-health/resource-health-overview) | Individual resource health tracking |
+| **Security** | [Microsoft Defender for Cloud](https://learn.microsoft.com/en-us/azure/defender-for-cloud/) | Threat detection and security posture |
+| **SIEM/SOAR** | [Microsoft Sentinel](https://learn.microsoft.com/en-us/azure/sentinel/overview) | Security analytics and automation |
+| **Compliance** | [Azure Policy](https://learn.microsoft.com/en-us/azure/governance/policy/overview) | Governance and compliance enforcement |
+| **Cost** | [Microsoft Cost Management](https://learn.microsoft.com/en-us/azure/cost-management-billing/) | Budget tracking and optimization |
+| **Automation** | [Azure Automation](https://learn.microsoft.com/en-us/azure/automation/overview) | Runbook execution and auto-remediation |
+| **Logs** | [Log Analytics](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/log-analytics-overview) | Log storage and KQL queries |
+| **Visualization** | [Azure Workbooks](https://learn.microsoft.com/en-us/azure/azure-monitor/visualize/workbooks-overview) | Custom dashboards and reports |
+
 ### Related Documents
 
 - [RACI Matrix](RACI-MATRIX.md) - Who does what
@@ -761,10 +861,18 @@ Post-Incident Review: <Scheduled date/time>
 - [Security Design](SECURITY-DESIGN.md) - Security architecture
 - [Cost and Access Control](COST-AND-ACCESS-CONTROL.md) - Financial governance
 
+### Microsoft Documentation References
+
+- [Cloud Adoption Framework - Manage Methodology](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/manage/)
+- [CAF - Ready Your Cloud Operations](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/manage/ready-cloud-operations)
+- [Well-Architected Framework - Incident Management](https://learn.microsoft.com/en-us/azure/well-architected/design-guides/incident-management)
+- [Azure Monitor Best Practices](https://learn.microsoft.com/en-us/azure/azure-monitor/best-practices)
+- [Azure Monitor Baseline Alerts (AMBA)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/landing-zone/design-area/management-monitor)
+
 ---
 
 ## Document Control
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | January 28, 2026 | Operations Team | Initial release |
+| 1.0 | January 28, 2026 | Operations Team | Initial release || 1.1 | January 28, 2026 | Operations Team | Aligned with Microsoft CAF RAMP methodology; Added shared responsibility model; Updated monitoring with Azure tooling references; Added post-incident review process; Added SLI/SLO definitions with error budgets; Added Azure tools reference table |
